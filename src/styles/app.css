@@ -1,0 +1,317 @@
+/**
+ * Centrální styly aplikace – design tokeny a layout.
+ * Používejte tyto třídy místo rozházených Tailwind/inline stylů, aby změny fungovaly.
+ */
+
+:root {
+  /* Spacing (odvozeno od 4px báze) */
+  --app-space-1: 0.25rem;   /* 4px */
+  --app-space-2: 0.5rem;    /* 8px */
+  --app-space-3: 0.75rem;   /* 12px */
+  --app-space-4: 1rem;      /* 16px */
+  --app-space-5: 1.25rem;   /* 20px */
+  --app-space-6: 1.5rem;    /* 24px */
+  --app-space-8: 2rem;      /* 32px */
+  --app-space-10: 2.5rem;   /* 40px */
+  --app-space-12: 3rem;     /* 48px */
+
+  /* Radius */
+  --app-radius-card: 12px;
+  --app-radius-input: 8px;
+
+  /* Barvy (fallback pokud Tailwind neaplikuje) */
+  --app-border: 1px solid #e5e7eb;
+  --app-border-blue: 2px solid #3b82f6;
+  --app-bg-card: #ffffff;
+  --app-bg-gray: #f9fafb;
+  --app-bg-blue: #eff6ff;
+  --app-bg-gray-100: #f3f4f6;
+  --app-text: #111827;
+  --app-text-muted: #6b7280;
+  --app-red: #dc2626;
+}
+
+/* Karty – jednotný vzhled a zaoblení */
+.app-card {
+  background-color: var(--app-bg-card);
+  border: var(--app-border);
+  border-radius: var(--app-radius-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.app-card-joined-top {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.app-card-joined-bottom {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-top: -1px;
+}
+
+.app-card-spaced {
+  margin-top: var(--app-space-8);
+}
+
+/* Boxík žadatelů uvnitř jednoho bílého okna – šedý rámeček, bílé pozadí */
+.app-applicants-box {
+  margin: var(--app-space-6);
+  margin-top: 0;
+  padding: var(--app-space-5);
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Sekce žadatelé – mřížka karet */
+.app-applicant-grid {
+  display: grid;
+  gap: var(--app-space-4);
+  grid-template-columns: repeat(var(--app-applicant-cols, 3), 1fr);
+}
+
+.app-applicant-header {
+  margin-bottom: 1.5rem;
+}
+
+.app-applicant-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: var(--app-radius-card);
+  background-color: var(--app-bg-gray-100);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.app-applicant-card:hover {
+  border-color: #d1d5db;
+  background-color: #f9fafb;
+}
+
+.app-applicant-card.is-active {
+  border: 2px solid #3b82f6;
+  background-color: var(--app-bg-blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.app-applicant-card:not(.is-mock) {
+  cursor: pointer;
+}
+
+.app-applicant-card.is-mock {
+  cursor: pointer;
+  opacity: 1;
+}
+
+.app-applicant-card-height {
+  min-height: 130px;
+}
+
+.app-applicant-role {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.app-applicant-role-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-applicant-role-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  flex: 0 0 9px;
+}
+
+.app-applicant-role-dot.is-main {
+  background-color: #2563eb;
+}
+
+.app-applicant-role-dot.is-co {
+  background-color: #9ca3af;
+}
+
+.app-applicant-text-block {
+  padding-left: 17px;
+}
+
+/* Ikona přidat žadatele – zelená jako ve Figma */
+.app-add-applicant-btn {
+  color: #16a34a;
+}
+.app-add-applicant-btn:hover {
+  background-color: #dcfce7;
+}
+
+/* Ikona koše – vždy vpravo nahoře; barva ikony přes Lucide prop color; při najetí šedý kruh */
+.app-applicant-delete {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  left: auto;
+  z-index: 10;
+}
+
+.app-applicant-delete-btn {
+  padding: 6px;
+  border-radius: 9999px;
+  transition: background-color 0.15s;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-applicant-delete-btn[data-enabled='true']:hover {
+  background-color: #e5e7eb;
+}
+
+.app-applicant-delete-btn[data-enabled='false'] {
+  cursor: default;
+}
+
+.app-dp-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 220px;
+  padding: 1.25rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  background: #f9fafb;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.app-dp-dropzone.is-drag-active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.app-dp-dropzone.is-uploading {
+  opacity: 0.8;
+}
+
+.app-dp-dropzone-icon {
+  width: 2rem;
+  height: 2rem;
+  color: #6b7280;
+}
+
+.app-dp-dropzone-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.app-dp-dropzone-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.app-dp-dropzone-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.app-dp-dropzone-error {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #dc2626;
+}
+
+.app-set-main-btn {
+  margin-top: auto;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 500;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.app-set-main-btn.is-enabled {
+  background-color: #d1d5db;
+  color: #374151;
+}
+
+.app-set-main-btn.is-enabled:hover {
+  background-color: #c4cad3;
+}
+
+.app-set-main-btn.is-disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Formulář osobní údaje – dva sloupce, větší mezera mezi sloupci */
+.app-form-grid-personal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--app-space-8);
+  row-gap: var(--app-space-3);
+  max-width: none;
+}
+
+.app-form-grid-personal .app-form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-form-grid-personal .app-form-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--app-text-muted);
+  line-height: 1.2;
+}
+
+.app-form-grid-personal .app-form-value {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.875rem;
+  background-color: var(--app-bg-gray);
+  border: var(--app-border);
+  border-radius: var(--app-radius-input);
+  color: var(--app-text);
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.app-form-grid-personal .app-form-field.col-span-2 {
+  grid-column: span 2;
+}
+
+.app-form-grid-personal .app-form-value.break-words {
+  word-break: break-word;
+}
+
+.app-form-grid-personal .app-form-value.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}

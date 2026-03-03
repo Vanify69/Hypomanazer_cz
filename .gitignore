@@ -1,0 +1,39 @@
+# Závislosti
+node_modules/
+
+# Proměnné prostředí a citlivá data
+.env
+.env.local
+.env.*.local
+server/.env
+
+# Databáze a uploady
+server/dev.db
+server/dev.db-journal
+server/uploads/
+
+# Build a výstupy
+dist/
+build/
+server/dist/
+
+# IDE a editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logy a cache
+*.log
+.npm/
+.cache/
+
+# Prisma
+server/prisma/migrations/**/migration_lock.toml
+
+# PWA / Vite
+*.local
+
+# Volitelně: Cursor
+.cursor/

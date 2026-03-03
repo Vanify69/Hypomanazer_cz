@@ -1,0 +1,75 @@
+/**
+ * Styly pro tlačítka u nahraných dokumentů (Zobrazit, Přehrát, Smazat).
+ * Explicitní barvy zaručí viditelnost bez závislosti na Tailwind purge/build.
+ */
+.doc-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  text-decoration: none;
+}
+.doc-file-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.doc-file-btn-zobrazit {
+  background-color: #2563eb !important;
+  color: #fff !important;
+}
+.doc-file-btn-zobrazit:hover:not(:disabled) {
+  background-color: #1d4ed8 !important;
+}
+.doc-file-btn-prehrat {
+  background-color: #f59e0b !important;
+  color: #fff !important;
+}
+.doc-file-btn-prehrat:hover:not(:disabled) {
+  background-color: #d97706 !important;
+}
+.doc-file-btn-smazat {
+  background-color: #dc2626 !important;
+  color: #fff !important;
+}
+.doc-file-btn-smazat:hover:not(:disabled) {
+  background-color: #b91c1c !important;
+}
+
+/**
+ * Prázdný stav záložek (Figma): šedý box, čárkovaný okraj, zaoblené rohy, padding, čitelný text.
+ * Explicitní CSS zaručí vzhled bez závislosti na Tailwind resetu.
+ */
+.empty-state-box {
+  min-height: 280px;
+  padding: 4rem 1.5rem !important;
+  border: 2px dashed #d1d7dd !important;
+  border-radius: 12px !important;
+  background-color: #f8f9fb !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.empty-state-box .empty-state-icon {
+  width: 64px !important;
+  height: 64px !important;
+  min-width: 64px;
+  min-height: 64px;
+  color: #6b7280 !important;
+  margin-bottom: 1rem !important;
+  flex-shrink: 0;
+}
+.empty-state-box .empty-state-text {
+  font-size: 15px !important;
+  color: #7a8b99 !important;
+  line-height: 1.5;
+  margin: 0;
+}
