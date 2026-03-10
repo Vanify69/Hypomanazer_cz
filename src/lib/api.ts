@@ -1,6 +1,7 @@
-export const API_BASE =
-  import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? '' : 'http://localhost:4000');
+/** V dev režimu prázdné (proxy). V produkci URL API na Railway (bez VITE_ kvůli Railpack „secret not found“). */
+export const API_BASE = import.meta.env.DEV
+  ? ''
+  : 'https://hypomanazercz-production.up.railway.app';
 
 const getToken = (): string | null => localStorage.getItem('hypo-token');
 
