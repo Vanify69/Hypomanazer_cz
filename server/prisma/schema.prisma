@@ -1,16 +1,16 @@
 // HypoManažer – datový model
-// Pro vývoj používáme SQLite (bez instalace DB). Pro produkci lze přepnout na PostgreSQL.
+// PostgreSQL pro produkci (Railway). DATABASE_URL nastavte v Railway Variables.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// --- Enums (uloženo jako text v SQLite) ---
+// --- Enums ---
 enum LoanType {
   PURCHASE
   REFINANCE
@@ -134,6 +134,7 @@ model User {
   referrers Referrer[]
   browserExtensionPairings BrowserExtensionPairing[]
   browserExtensionDevices   BrowserExtensionDevice[]
+  browserExtensionMappings  BrowserExtensionMapping[]
 }
 
 model Lead {
@@ -356,4 +357,19 @@ model BrowserExtensionDevice {
   refreshTokenHash String   // hash refresh tokenu
   expiresAt        DateTime
   createdAt        DateTime @default(now())
+}
+
+// Mapping packy pro bankovní formuláře, ukládané z rozšíření přes API.
+model BrowserExtensionMapping {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankId     String
+  hostname   String   // např. "noby.cz" bez www
+  pathPrefix String   // např. "/modelation/mortgage"
+  packJson   String   // celé JSON tělo mapping packu
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, hostname, pathPrefix])
 }
