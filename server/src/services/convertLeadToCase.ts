@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import { prisma } from "../lib/prisma.js";
 import { getCaseUploadDir, getIntakeUploadDir, getUploadDir } from "../lib/upload.js";
-import type { DocType } from "@prisma/client";
+import type { DocType } from "../lib/prisma.js";
 
 const DOC_TYPE_TO_CASE_FILE_TYPE: Record<DocType, string> = {
   ID_FRONT: "op-predni",

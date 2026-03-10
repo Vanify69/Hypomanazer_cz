@@ -2,8 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { generateToken, hashToken, getReferrerExpiresAt } from "../lib/tokens.js";
-import { ReferrerEventType } from "@prisma/client";
-import type { ReferrerType, PayoutMethod } from "@prisma/client";
+import { ReferrerEventType, type ReferrerType, type PayoutMethod } from "../lib/prisma.js";
 import { isQueueAvailable, addSendReferrerLinkJob } from "../lib/queue.js";
 
 const router = Router();

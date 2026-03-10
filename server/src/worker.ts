@@ -26,8 +26,7 @@ import {
 import { convertLeadToCase } from "./services/convertLeadToCase.js";
 import { runExtractionsForCase } from "./services/runExtractions.js";
 import { REFERRER_VISIBLE_STATUS_LABELS } from "./lib/referrerStatus.js";
-import { LeadEventType, IntakeSessionState } from "@prisma/client";
-import { ReferrerEventType } from "@prisma/client";
+import { LeadEventType, IntakeSessionState, ReferrerEventType } from "./lib/prisma.js";
 
 const REDIS_URL = process.env.REDIS_URL ?? "";
 const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";

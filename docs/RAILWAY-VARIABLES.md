@@ -50,7 +50,9 @@ Následující proměnné přidejte jednu po druhé (Add Variable). Hodnoty vypl
 
 | Název | Hodnota | Popis |
 |------|--------|--------|
-| `PRISMA_DISABLE_UPDATE_CHECK` | `1` | Potlačí Prisma banner „Update available“. |
+| `PRISMA_HIDE_UPDATE_MESSAGE` | `1` | Potlačí Prisma banner (start skript to nastavuje). Projekt používá Prisma 7. |
+
+**Varování „npm warn config production“:** Vzniká při buildu, pokud Railway používá `npm install --production`. V **Settings → Build** lze Build Command změnit na: `npm ci --omit=dev && npm run build` – tím se použije novější přepínač a varování zmizí.
 
 ---
 

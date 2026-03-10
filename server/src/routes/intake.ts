@@ -9,7 +9,7 @@ import { validateRequiredSlots } from "../lib/intakeValidation.js";
 import { convertLeadToCase } from "../services/convertLeadToCase.js";
 import { runExtractionsForCase } from "../services/runExtractions.js";
 import { isQueueAvailable, addConvertLeadToCaseJob } from "../lib/queue.js";
-import { LeadEventType, IntakeSessionState } from "@prisma/client";
+import { LeadEventType, IntakeSessionState } from "../lib/prisma.js";
 
 const router = Router();
 

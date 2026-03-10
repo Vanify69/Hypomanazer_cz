@@ -1,7 +1,7 @@
 /**
  * Mapování Case + ExtractedData na FillModel pro rozšíření prohlížeče.
  */
-import type { Case, ExtractedData } from "@prisma/client";
+import type { Case, ExtractedData } from "./prisma.js";
 
 export type FillModelApplicant = {
   applicantId: string;

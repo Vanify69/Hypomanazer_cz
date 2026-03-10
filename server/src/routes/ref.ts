@@ -2,8 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { hashToken } from "../lib/tokens.js";
 import { mapToReferrerVisibleStatus, type ReferrerVisibleStatus } from "../lib/referrerStatus.js";
-import { ReferrerEventType } from "@prisma/client";
-import type { LoanType } from "@prisma/client";
+import { ReferrerEventType, type LoanType } from "../lib/prisma.js";
 
 const router = Router();
 

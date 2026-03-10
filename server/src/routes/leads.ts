@@ -6,9 +6,8 @@ import {
   hashToken,
   getIntakeExpiresAt,
 } from "../lib/tokens.js";
-import type { LeadStatus, LoanType, LeadSource } from "@prisma/client";
-import type { Prisma } from "@prisma/client";
-import { LeadEventType, IntakeSessionState } from "@prisma/client";
+import type { LeadStatus, LoanType, LeadSource, Prisma } from "../lib/prisma.js";
+import { LeadEventType, IntakeSessionState } from "../lib/prisma.js";
 import { isQueueAvailable, addSendIntakeLinkJob } from "../lib/queue.js";
 
 const router = Router();

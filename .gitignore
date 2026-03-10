@@ -33,6 +33,7 @@ server/dist/
 
 # Prisma
 server/prisma/migrations/**/migration_lock.toml
+server/src/generated/
 
 # PWA / Vite
 *.local
