@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
-
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
+import { getJwtSecret } from "../lib/env.js";
 
 export interface JwtPayload {
   userId: string;
@@ -23,7 +22,7 @@ export async function requireAuth(
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, email: true, name: true },

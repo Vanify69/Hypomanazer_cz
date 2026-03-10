@@ -75,7 +75,8 @@ export type Msg =
   | { type: "FILL_ALL" }
   | { type: "FILL_SECTION"; sectionId: string }
   | { type: "FILL_FIELD"; fieldId: string }
-  | { type: "RUN_DOM_SCAN"; tabId: number };
+  | { type: "RUN_DOM_SCAN"; tabId: number }
+  | { type: "SEND_MAPPING"; pack: BankMappingPack };
 
 export type FillRequest = {
   type: "FILL_REQUEST";
@@ -83,6 +84,8 @@ export type FillRequest = {
   applicantIndex: number;
   bankId: string;
   fillModel: FillModel;
+  /** Volitelný mapping pack – pokud je přítomen, content script ho použije místo lokálních packů. */
+  pack?: BankMappingPack;
   mode:
     | { kind: "all" }
     | { kind: "section"; sectionId: string }

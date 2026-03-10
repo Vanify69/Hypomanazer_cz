@@ -3,7 +3,7 @@
  * Autentizace, cache tokenů, fetch FillModelu, routing zpráv.
  */
 
-import type { FillModel, FillRequest, Msg } from "../types.js";
+import type { FillModel, FillRequest, Msg, BankMappingPack } from "../types.js";
 
 const API_BASE = "http://localhost:4000";
 const FILL_MODEL_TTL_MS = 120_000; // 2 min
@@ -68,6 +68,35 @@ async function getActiveCaseFillModel(): Promise<FillModel | null> {
   return model?.version === "1.0" ? model : null;
 }
 
+/** Zkusí načíst mapping pack pro danou URL z HypoManager API. */
+async function getMappingPackForUrl(url: string): Promise<BankMappingPack | null> {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  const token = await getAccessToken();
+  if (!token) return null;
+  const hostname = u.hostname.toLowerCase().replace(/^www\./, "");
+  const pathname = u.pathname;
+
+  const res = await fetch(
+    `${API_BASE}/api/integrations/browser-extension/mappings?hostname=${encodeURIComponent(
+      hostname
+    )}&pathname=${encodeURIComponent(pathname)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) return null;
+  const pack = (await res.json()) as BankMappingPack;
+  if (!pack?.bankId || !pack?.steps?.length) return null;
+  return pack;
+}
+
 async function getApplicantIndex(): Promise<number> {
   const out = await chrome.storage.session.get("applicantIndex");
   return typeof out.applicantIndex === "number" ? out.applicantIndex : 0;
@@ -115,13 +144,16 @@ async function buildFillRequest(params: {
   if (!model) throw new Error("Nemáš aktivní případ – spáruj HypoManager a zvol případ.");
   const applicantIndex = await getApplicantIndex();
   const tab = await chrome.tabs.get(params.tabId);
-  const bankId = detectBankId(tab.url ?? "");
+  const url = tab.url ?? "";
+  const bankId = detectBankId(url);
+  const packFromApi = url ? await getMappingPackForUrl(url) : null;
   return {
     type: "FILL_REQUEST",
     requestId: `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     applicantIndex,
-    bankId,
+    bankId: packFromApi?.bankId ?? bankId,
     fillModel: model,
+    pack: packFromApi ?? undefined,
     mode: params.mode,
   };
 }
@@ -129,7 +161,8 @@ async function buildFillRequest(params: {
 chrome.runtime.onMessage.addListener(
   (message: Msg & { type: string }, sender: chrome.runtime.MessageSender, sendResponse: (r: unknown) => void) => {
     (async () => {
-      switch (message?.type) {
+      const msgType = message != null && typeof message === "object" && "type" in message ? (message as { type: string }).type : undefined;
+      switch (msgType) {
         case "PAIR_SUBMIT_CODE": {
           const code = String((message as { code: string }).code ?? "").trim().toUpperCase().replace(/\s/g, "");
           if (!code) {
@@ -264,8 +297,48 @@ chrome.runtime.onMessage.addListener(
           return;
         }
 
+        case "SEND_MAPPING": {
+          const pack = (message as { pack: BankMappingPack }).pack;
+          if (!pack?.bankId || !pack?.steps?.length) {
+            sendResponse({ ok: false, error: "Neplatný mapping pack." });
+            return;
+          }
+          const token = await getAccessToken();
+          if (!token) {
+            sendResponse({ ok: false, error: "Nejsi spárovaný s HypoManagerem. Nejprve spáruj v Nastavení." });
+            return;
+          }
+          try {
+            const res = await fetch(`${API_BASE}/api/integrations/browser-extension/mappings`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(pack),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              sendResponse({ ok: false, error: (data as { error?: string }).error ?? res.statusText });
+              return;
+            }
+            sendResponse({
+              ok: true,
+              id: (data as { id?: string }).id,
+              hostname: (data as { hostname?: string }).hostname,
+              pathPrefix: (data as { pathPrefix?: string }).pathPrefix,
+            });
+          } catch (e) {
+            sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) });
+          }
+          return;
+        }
+
         default:
-          sendResponse({ ok: false, error: "UnknownMessageType" });
+          sendResponse({
+            ok: false,
+            error: msgType === undefined ? "Chybí typ zprávy. Obnov rozšíření (chrome://extensions → Obnovit)." : `Neznámý typ zprávy: ${String(msgType)}`,
+          });
       }
     })().catch((err) => sendResponse({ ok: false, error: String(err) }));
 

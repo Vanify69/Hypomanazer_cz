@@ -1,5 +1,11 @@
 # Hypo – zprostředkovatel hypoték
 
+**Přehled funkcionality (API, frontend, env, lokálně vs produkce):** [docs/FUNCTIONALITY.md](docs/FUNCTIONALITY.md)
+
+**CI:** Při pushi na `main`/`master` se v GitHub Actions spustí testy a build backendu (`server/`) a testy a build frontendu (kořen). Konfigurace: [.github/workflows/ci.yml](.github/workflows/ci.yml).
+
+**Testy:** Backend: `cd server && npm run test` (Node.js test runner). Frontend: `npm run test` (Vitest, testy v `src/**/*.test.ts`).
+
 ## Vývoj
 
 **Spuštění frontendu i API najednou (doporučeno):**
@@ -13,6 +19,20 @@ Spustí backend na portu 4000 a Vite na portu 3000. V terminálu uvidíte výstu
 - Pouze API: `npm run dev:server` (port 4000; běží z adresáře `server`).
 
 Po prvním klonu nebo po změně závislostí v `server/` spusťte v `server/`: `npm install` a případně `npx prisma generate`.
+
+### Lokálně vs produkce (Railway)
+
+| | Lokálně | Produkce |
+|--|--------|----------|
+| **API** | `npm run dev:server` (port 4000) | Služba s Root = `server`, Postgres |
+| **Frontend** | `npm run dev` (port 3000), proxy na API | Samostatná služba, Dockerfile, `serve -s build` |
+| **API URL** | Proxy (prázdná base) | Nastavená v `src/lib/api.ts` |
+
+Detaily a tabulka env proměnných: [docs/FUNCTIONALITY.md](docs/FUNCTIONALITY.md).
+
+### Změna URL API (produkce)
+
+Produkční URL API je v kódu frontendu. Pro jinou API adresu upravte v repozitáři soubor **`src/lib/api.ts`** – konstantu `API_BASE` pro ne-dev režim – a znovu nasaďte frontend (build + deploy).
 
 ---
 

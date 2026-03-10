@@ -71,6 +71,12 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 #fill-report { margin-top: 8px; }
 
 .admin-only { border-top: 1px solid #eee; padding-top: 12px; margin-top: 12px; }
+.mapping-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.mapping-actions button { flex: 1; min-width: 120px; }
+.send-status { font-size: 12px; padding: 6px 8px; border-radius: 4px; margin-top: 4px; }
+.send-status.ok { background: #e6f4ea; color: #0d6832; }
+.send-status.warn { background: #fef7e0; color: #7d4e00; }
+.send-status.error { background: #fce8e6; color: #c5221f; }
 .export-output { width: 100%; box-sizing: border-box; margin-top: 8px; font-size: 11px; font-family: monospace; resize: vertical; }
 .dom-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; font-size: 12px; }
 .dom-row select { flex: 1; min-width: 0; padding: 4px; }

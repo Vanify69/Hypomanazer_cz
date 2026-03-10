@@ -38,7 +38,11 @@
     <button id="dom-scan-btn">Procházet DOM na této stránce</button>
     <div id="dom-scan-status"></div>
     <div id="dom-mapping-list"></div>
-    <button id="export-mapping-btn" disabled>Exportovat mapping pack (JSON)</button>
+    <div class="mapping-actions">
+      <button id="export-mapping-btn" disabled>Exportovat mapping pack (JSON)</button>
+      <button id="send-mapping-btn" disabled>Odeslat mapping do HypoManageru</button>
+    </div>
+    <div id="send-mapping-status" class="send-status"></div>
     <textarea id="export-output" readonly rows="6" class="export-output"></textarea>
   </section>
 

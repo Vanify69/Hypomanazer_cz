@@ -90,7 +90,8 @@ async function runFill(req: FillRequest): Promise<FillResult> {
   const errors: FillResult["errors"] = [];
 
   const { bankId, mode } = req;
-  const pack = getPackForPage(window.location.hostname, window.location.pathname);
+  const pack: BankMappingPack | null =
+    req.pack ?? getPackForPage(window.location.hostname, window.location.pathname);
 
   if (!pack) {
     errors.push({ error: `Pro tuto stránku (${window.location.hostname}) není k dispozici mapping. Otevři testovací stránku: http://localhost:4000/test-autofill.html` });

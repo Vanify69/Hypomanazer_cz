@@ -8,9 +8,9 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { hashToken, generateToken, verifyToken } from "../lib/tokens.js";
+import { getJwtSecret } from "../lib/env.js";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
 const PAIRING_CODE_TTL_MINUTES = 5;
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_DAYS = 60;
@@ -103,7 +103,7 @@ router.post("/pairing/confirm", async (req, res) => {
 
   const accessToken = jwt.sign(
     { userId: pairing.user.id, email: pairing.user.email },
-    JWT_SECRET as jwt.Secret,
+    getJwtSecret() as jwt.Secret,
     { expiresIn: ACCESS_TOKEN_TTL } as jwt.SignOptions
   );
   const decoded = jwt.decode(accessToken) as { exp?: number };
@@ -150,7 +150,7 @@ router.post("/token/refresh", async (req, res) => {
 
   const accessToken = jwt.sign(
     { userId: user.id, email: user.email },
-    JWT_SECRET as jwt.Secret,
+    getJwtSecret() as jwt.Secret,
     { expiresIn: ACCESS_TOKEN_TTL } as jwt.SignOptions
   );
   const decoded = jwt.decode(accessToken) as { exp?: number };
@@ -162,6 +162,119 @@ router.post("/token/refresh", async (req, res) => {
     accessToken,
     accessTokenExpiresAt,
   });
+});
+
+/**
+ * POST /api/integrations/browser-extension/mappings
+ * Uloží nebo aktualizuje mapping pack pro daného uživatele a stránku (hostname + pathPrefix).
+ * Používá se z rozšíření nebo z HM UI (vyžaduje Bearer token = requireAuth).
+ */
+router.post("/mappings", requireAuth, async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const body = req.body as any;
+
+  if (!body || typeof body !== "object") {
+    res.status(400).json({ error: "Chybí tělo požadavku." });
+    return;
+  }
+
+  const bankId = String(body.bankId ?? "").trim() || "bank";
+  const hostnames = Array.isArray(body.match?.hostnames) ? body.match.hostnames : [];
+  const pathIncludes = Array.isArray(body.match?.pathIncludes) ? body.match.pathIncludes : [];
+
+  const hostnameRaw = (hostnames[0] ?? "").toString().toLowerCase().trim();
+  const hostname = hostnameRaw.replace(/^www\./, "");
+  const pathPrefix = (pathIncludes[0] ?? "/").toString().trim() || "/";
+
+  if (!hostname) {
+    res.status(400).json({ error: "match.hostnames[0] je povinné." });
+    return;
+  }
+
+  const packJson = JSON.stringify(body);
+
+  const mapping = await prisma.browserExtensionMapping.upsert({
+    where: {
+      userId_hostname_pathPrefix: {
+        userId,
+        hostname,
+        pathPrefix,
+      },
+    },
+    create: {
+      userId,
+      bankId,
+      hostname,
+      pathPrefix,
+      packJson,
+    },
+    update: {
+      bankId,
+      packJson,
+    },
+  });
+
+  res.json({
+    ok: true,
+    id: mapping.id,
+    bankId: mapping.bankId,
+    hostname: mapping.hostname,
+    pathPrefix: mapping.pathPrefix,
+    updatedAt: mapping.updatedAt.toISOString(),
+  });
+});
+
+/**
+ * GET /api/integrations/browser-extension/mappings?hostname=&pathname=
+ * Vrátí nejvhodnější mapping pack pro aktuální URL (podle hostname + pathname, specifický pathPrefix vyhrává).
+ */
+router.get("/mappings", requireAuth, async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const hostnameQuery = String(req.query.hostname ?? "").toLowerCase().trim();
+  const pathnameQuery = String(req.query.pathname ?? "").trim() || "/";
+
+  if (!hostnameQuery) {
+    res.status(400).json({ error: "hostname je povinný query parametr." });
+    return;
+  }
+
+  const hostname = hostnameQuery.replace(/^www\./, "");
+  const mappings = await prisma.browserExtensionMapping.findMany({
+    where: { userId, hostname },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  if (!mappings.length) {
+    res.status(404).json({ error: "Pro tuto stránku není uložen žádný mapping." });
+    return;
+  }
+
+  const pathnameLower = pathnameQuery.toLowerCase();
+  let best: typeof mappings[number] | null = null;
+
+  for (const m of mappings) {
+    const prefix = m.pathPrefix?.toLowerCase() ?? "/";
+    if (!pathnameLower.includes(prefix)) continue;
+    if (!best) {
+      best = m;
+      continue;
+    }
+    if ((prefix.length > (best.pathPrefix?.length ?? 0))) {
+      best = m;
+    }
+  }
+
+  if (!best) {
+    res.status(404).json({ error: "Pro tuto stránku není vhodný mapping." });
+    return;
+  }
+
+  try {
+    const pack = JSON.parse(best.packJson);
+    res.json(pack);
+  } catch {
+    res.status(500).json({ error: "Mapping je poškozený (nelze parsovat JSON)." });
+  }
 });
 
 export { router as browserExtensionRouter };

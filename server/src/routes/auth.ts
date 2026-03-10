@@ -3,10 +3,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
+import { getJwtSecret, getJwtExpiresIn } from "../lib/env.js";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
 
 // Registrace
 router.post("/register", async (req, res) => {
@@ -40,8 +39,8 @@ router.post("/register", async (req, res) => {
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET as jwt.Secret,
-      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+      getJwtSecret() as jwt.Secret,
+      { expiresIn: getJwtExpiresIn() } as jwt.SignOptions
     );
 
     res.status(201).json({
@@ -86,8 +85,8 @@ router.post("/login", async (req, res) => {
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      JWT_SECRET as jwt.Secret,
-      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+      getJwtSecret() as jwt.Secret,
+      { expiresIn: getJwtExpiresIn() } as jwt.SignOptions
     );
 
     res.json({

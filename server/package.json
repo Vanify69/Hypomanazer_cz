@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "dev:all": "cd .. && npm run dev:all",
     "dev:worker": "tsx watch src/worker.ts",
-    "build": "tsc",
+    "build": "npm run test && tsc",
     "test": "node --import tsx --test src/lib/tokens.test.ts src/lib/referrerStatus.test.ts src/lib/intakeValidation.test.ts",
     "start": "prisma generate && prisma db push && node dist/index.js",
     "worker": "node dist/worker.js",
