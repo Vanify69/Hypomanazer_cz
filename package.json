@@ -43,6 +43,7 @@
             "react-resizable-panels": "^2.1.7",
             "react-router": "*",
             "recharts": "^2.15.2",
+            "serve": "^14.2.4",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
             "vaul": "^1.1.2"
@@ -59,6 +60,7 @@
             "dev": "vite",
             "dev:server": "npm run dev --prefix server",
             "dev:all": "npx concurrently -k -n api,vite -c blue,green \"npm run dev:server\" \"wait-on -t 30000 tcp:127.0.0.1:4000 && npm run dev\"",
-            "build": "vite build"
+            "build": "vite build",
+            "start": "serve -s build -l ${PORT:-3000}"
       }
 }
