@@ -55,6 +55,20 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// Root – API běží, frontend je samostatná aplikace (nebo se servíruje jinde)
+app.get("/", (_req, res) => {
+  res.type("html").send(`
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>HypoManažer API</title></head>
+<body style="font-family: sans-serif; max-width: 560px; margin: 2rem auto; line-height: 1.5;">
+  <h1>HypoManažer API</h1>
+  <p>Backend běží. API je dostupné pod cestou <code>/api/...</code>.</p>
+  <p><a href="/api/health">/api/health</a> – stav služby</p>
+  <p>Pro plnou aplikaci (React) nasaďte frontend nebo ho servírujte z tohoto serveru.</p>
+</body></html>
+  `.trim());
+});
+
 // Globální handler chyb – aby 500 vracelo JSON a zprávu pro klienta
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[API] Nezachycená chyba:", err);
