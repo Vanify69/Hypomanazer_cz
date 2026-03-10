@@ -1,0 +1,214 @@
+/**
+ * Tmavý režim – přepis světlých stylů při třídě .dark na html.
+ * Používá CSS proměnné z index.css (:root / .dark).
+ */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Pozadí – hlavní plochy */
+html.dark .bg-gray-50,
+html.dark .bg-white {
+  background-color: var(--background) !important;
+}
+
+/* Karty a sekce – světlejší než pozadí */
+html.dark .bg-gray-100 {
+  background-color: var(--card) !important;
+}
+
+/* Borders */
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: var(--border) !important;
+}
+
+/* Text */
+html.dark .text-gray-900 {
+  color: var(--foreground) !important;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600,
+html.dark .text-gray-500 {
+  color: var(--muted-foreground) !important;
+}
+
+html.dark .text-gray-400 {
+  color: oklch(0.55 0.02 260) !important;
+}
+
+/* Hover stavy */
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: var(--accent) !important;
+}
+
+/* Tabulky – hlavička a řádky */
+html.dark thead.bg-gray-50,
+html.dark .bg-gray-50.border-b {
+  background-color: var(--muted) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark tbody tr:hover,
+html.dark tr.hover\:bg-gray-50:hover {
+  background-color: var(--accent) !important;
+}
+
+/* Inputy a formuláře */
+html.dark input[type="text"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark input.bg-gray-50,
+html.dark input.bg-white {
+  background-color: var(--input) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark input::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* Kbd / klávesové zkratky */
+html.dark kbd.bg-gray-100 {
+  background-color: var(--muted) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+/* Tlačítka – sekundární / outline */
+html.dark button.border-gray-300,
+html.dark .border-gray-300 {
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark button.border-gray-300:hover {
+  background-color: var(--accent) !important;
+}
+
+/* Tabulky – dělící čáry */
+html.dark .divide-gray-200 > :not(:last-child) {
+  border-color: var(--border) !important;
+}
+
+/* Sidebar – aktivní položka a modré odkazy */
+html.dark .bg-blue-50.text-blue-700 {
+  background-color: oklch(0.25 0.08 264) !important;
+  color: oklch(0.8 0.12 264) !important;
+}
+
+html.dark .text-blue-600,
+html.dark .text-blue-700 {
+  color: oklch(0.75 0.15 264) !important;
+}
+
+/* Modré tlačítko – zachováme, jen mírně upravíme hover */
+html.dark .bg-blue-600:hover {
+  background-color: oklch(0.5 0.2 264) !important;
+}
+
+/* Hover text – odkazy */
+html.dark .hover\:text-gray-900:hover,
+html.dark .hover\:text-blue-700:hover {
+  color: var(--foreground) !important;
+}
+
+/* bg-gray-200 – např. progress bar track */
+html.dark .bg-gray-200 {
+  background-color: var(--muted) !important;
+}
+
+/* Placeholder v dark mode */
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* Modré info boxy */
+html.dark .bg-blue-50 {
+  background-color: oklch(0.2 0.05 264) !important;
+  border-color: oklch(0.35 0.1 264) !important;
+}
+
+html.dark .text-blue-800 {
+  color: oklch(0.75 0.15 264) !important;
+}
+
+/* Chybové hlášky */
+html.dark .bg-red-50 {
+  background-color: oklch(0.2 0.08 25) !important;
+}
+
+html.dark .text-red-700 {
+  color: oklch(0.75 0.15 25) !important;
+}
+
+/* app.css – komponenty */
+html.dark .app-card,
+html.dark .app-applicants-box {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .app-applicant-card {
+  background-color: var(--muted) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark .app-applicant-card:hover {
+  background-color: var(--accent) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark .app-applicant-card.is-active {
+  border-color: oklch(0.55 0.2 264) !important;
+  background-color: oklch(0.25 0.08 264) !important;
+}
+
+html.dark .app-dp-dropzone {
+  background-color: var(--muted) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark .app-dp-dropzone .app-dp-dropzone-title {
+  color: var(--foreground) !important;
+}
+
+html.dark .app-dp-dropzone .app-dp-dropzone-subtitle,
+html.dark .app-dp-dropzone .app-dp-dropzone-icon {
+  color: var(--muted-foreground) !important;
+}
+
+html.dark .app-dp-dropzone-button {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark .app-form-grid-personal .app-form-label {
+  color: var(--muted-foreground) !important;
+}
+
+html.dark .app-form-grid-personal .app-form-value {
+  background-color: var(--input) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark .app-set-main-btn.is-enabled {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark .app-set-main-btn.is-enabled:hover {
+  background-color: var(--accent) !important;
+}
+
+html.dark .app-set-main-btn.is-disabled {
+  background-color: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+}
