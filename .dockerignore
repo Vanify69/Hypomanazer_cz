@@ -1,0 +1,17 @@
+# Dockerfile v kořeni se používá jen pro frontend (služba bez Root Directory).
+# API služba (Root = server) tento soubor nečte.
+
+node_modules
+.git
+.cursor
+server
+Figma_design
+browser_extension
+build
+dist
+*.log
+.env
+.env.*
+.DS_Store
+.cache
+.npm

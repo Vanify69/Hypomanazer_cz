@@ -53,13 +53,13 @@ Aby React aplikace (přihlášení, leady, případy) běžela na Railway (např
    V Railway projektu přidejte další službu („+ New“ → např. „GitHub Repo“ a vyberte stejný repozitář).
 
 2. **Root Directory**  
-   Nechte **prázdné** (nebo `.`) – build i start se spouštějí z **kořene** repozitáře (kde je `package.json` s Vite a `build`/`start`).
+   Nechte **prázdné** (nebo `.`) – build i start z kořene repozitáře.
 
-3. **Build**  
-   Railway použije `npm install` a `npm run build` z kořene. Výstup je ve složce `build/`.
+3. **Build přes Dockerfile (doporučeno)**  
+   V kořeni repa je **Dockerfile** pro frontend. Pokud ho Railway použije (automaticky při buildu z kořene), build proběhne bez Railpacku a bez vyžadování secretů. Pokud by Railway stále používal Railpack a padal na „secret VITE_API_URL“, zkontrolujte, že se opravdu bere **Dockerfile** (Settings → Build → případně vyčistit cache / Redeploy).
 
 4. **Start**  
-   Použije se `npm run start` – servíruje obsah `build/` přes `serve` na `PORT` (Railway ho nastaví sám).
+   S Dockerfile: kontejner spouští `serve -s build -l $PORT`. Bez Dockerfile: `npm run start`.
 
 5. **URL API**  
    Production frontend má URL API nastavenou v kódu (`src/lib/api.ts`). Žádná proměnná prostředí pro build není potřeba (Railpack by jinak vyžadoval secret a build by padal). Pro jinou API URL upravte v repu `src/lib/api.ts` a znovu nasaďte.
