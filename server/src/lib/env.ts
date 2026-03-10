@@ -4,11 +4,14 @@
  */
 const DEV_SECRET = "dev-secret-change-in-production";
 
+let jwtSecretWarned = false;
+
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET?.trim();
   if (secret && secret.length >= 32) return secret;
-  if (process.env.NODE_ENV === "production") {
-    console.warn("[env] JWT_SECRET v produkci chybí nebo je příliš krátký – použijte silný secret (min. 32 znaků).");
+  if (process.env.NODE_ENV === "production" && !jwtSecretWarned) {
+    jwtSecretWarned = true;
+    console.warn("[env] JWT_SECRET v produkci chybí nebo je příliš krátký – nastavte v Railway Variables (min. 32 znaků).");
   }
   return DEV_SECRET;
 }

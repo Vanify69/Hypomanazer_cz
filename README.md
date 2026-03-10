@@ -51,8 +51,10 @@ Aby API běželo na Railway a reagovalo na doménu (např. hypomanazer.cz):
 
 4. **Proměnné prostředí (Variables)**  
    U služby API nastavte alespoň:
-   - `DATABASE_URL` – connection string z Railway Postgres (Variables u Postgres služby, např. `DATABASE_URL` nebo „Add Variable Reference“).
-   - `JWT_SECRET` – náhodný dlouhý řetězec (min. 32 znaků).  
+   - `DATABASE_URL` – connection string z Railway Postgres (Variables u Postgres služby, např. „Add Variable Reference“ → Postgres → `DATABASE_URL`).
+   - `JWT_SECRET` – náhodný dlouhý řetězec (min. 32 znaků).
+   - `NODE_ENV` – `production`.  
+   **Kompletní seznam proměnných** (včetně volitelných): [docs/RAILWAY-VARIABLES.md](docs/RAILWAY-VARIABLES.md). Pokud Variables zmizely, nastavte je znovu dle tohoto přehledu.  
    `PORT` Railway nastaví sám.
 
 5. **Port**  

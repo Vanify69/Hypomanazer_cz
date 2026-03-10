@@ -9,7 +9,7 @@
     "dev:worker": "tsx watch src/worker.ts",
     "build": "npm run test && tsc",
     "test": "node --import tsx --test src/lib/tokens.test.ts src/lib/referrerStatus.test.ts src/lib/intakeValidation.test.ts",
-    "start": "prisma generate && prisma db push && node dist/index.js",
+    "start": "PRISMA_DISABLE_UPDATE_CHECK=1 prisma generate && PRISMA_DISABLE_UPDATE_CHECK=1 prisma db push && node dist/index.js",
     "worker": "node dist/worker.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
