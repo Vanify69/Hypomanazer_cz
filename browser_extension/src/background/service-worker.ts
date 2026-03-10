@@ -5,10 +5,17 @@
 
 import type { FillModel, FillRequest, Msg, BankMappingPack } from "../types.js";
 
-const API_BASE = "http://localhost:4000";
+const DEFAULT_API_BASE = "http://localhost:4000";
 const FILL_MODEL_TTL_MS = 120_000; // 2 min
 
 let accessTokenMemory: { token: string; expiresAt: number } | null = null;
+
+/** URL API z Nastavení rozšíření (Options). Prázdné = localhost pro vývoj. */
+async function getApiBase(): Promise<string> {
+  const out = await chrome.storage.local.get("apiBaseUrl");
+  const url = (out.apiBaseUrl as string)?.trim();
+  return url || DEFAULT_API_BASE;
+}
 
 async function getInstallationId(): Promise<string> {
   const out = await chrome.storage.local.get("installationId");
@@ -30,6 +37,7 @@ async function getAccessToken(): Promise<string | null> {
   }
   const local = await chrome.storage.local.get("refreshToken");
   if (!local.refreshToken) return null;
+  const API_BASE = await getApiBase();
   const res = await fetch(`${API_BASE}/api/integrations/browser-extension/token/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -60,6 +68,7 @@ async function getActiveTabId(): Promise<number> {
 async function getActiveCaseFillModel(): Promise<FillModel | null> {
   const token = await getAccessToken();
   if (!token) return null;
+  const API_BASE = await getApiBase();
   const res = await fetch(`${API_BASE}/api/cases/active/current/fill-model`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -78,6 +87,7 @@ async function getMappingPackForUrl(url: string): Promise<BankMappingPack | null
   }
   const token = await getAccessToken();
   if (!token) return null;
+  const API_BASE = await getApiBase();
   const hostname = u.hostname.toLowerCase().replace(/^www\./, "");
   const pathname = u.pathname;
 
@@ -170,6 +180,7 @@ chrome.runtime.onMessage.addListener(
             return;
           }
           const installationId = await getInstallationId();
+          const API_BASE = await getApiBase();
           const confirmRes = await fetch(`${API_BASE}/api/integrations/browser-extension/pairing/confirm`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -309,6 +320,7 @@ chrome.runtime.onMessage.addListener(
             return;
           }
           try {
+            const API_BASE = await getApiBase();
             const res = await fetch(`${API_BASE}/api/integrations/browser-extension/mappings`, {
               method: "POST",
               headers: {

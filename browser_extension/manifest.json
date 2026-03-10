@@ -20,6 +20,10 @@
   "host_permissions": [
     "http://localhost:4000/*",
     "http://localhost:3000/*",
+    "https://*.railway.app/*",
+    "https://*.up.railway.app/*",
+    "https://*.vercel.app/*",
+    "https://*.onrender.com/*",
     "https://noby.cz/*",
     "https://www.noby.cz/*"
   ],

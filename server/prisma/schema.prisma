@@ -1,5 +1,5 @@
-// HypoManažer – datový model
-// PostgreSQL pro produkci (Railway). DATABASE_URL nastavte v Railway Variables.
+// HypoManažer – datový model (SQLite pro lokální vývoj)
+// Používá se když DATABASE_URL je file:./dev.db (nebo nezačíná na postgresql://)
 
 generator client {
   provider = "prisma-client"
@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // --- Enums ---

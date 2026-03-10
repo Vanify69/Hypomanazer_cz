@@ -14,6 +14,13 @@
 </head>
 <body>
   <h1>Nastavení rozšíření</h1>
+
+  <label style="display: block; margin-bottom: 0.5rem;">
+    <strong>URL API HypoManageru</strong>
+  </label>
+  <input type="text" id="api-base-url" placeholder="https://vase-api.up.railway.app" style="width: 100%; padding: 0.5rem; margin-bottom: 0.25rem; box-sizing: border-box;" />
+  <p class="hint">Pro vývoj nech prázdné nebo nastav <code>http://localhost:4000</code>. V produkci zadej adresu API (např. z Railway). Bez správné URL nebude spárování fungovat.</p>
+
   <label>
     <input type="checkbox" id="admin-mapping-tools" />
     <span>Zobrazit nástroje pro správu mappingů (admin)</span>

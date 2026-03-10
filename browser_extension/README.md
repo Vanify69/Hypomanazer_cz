@@ -19,6 +19,16 @@ Výstup je ve složce `dist/`.
 3. Klikni **Načíst rozbalené**
 4. Vyber složku `browser_extension/dist`
 
+## Produkce – URL API
+
+V **produkci** rozšíření nemůže volat `localhost`. Před spárováním nastav adresu API:
+
+1. Pravý klik na ikonu rozšíření → **Možnosti** (nebo chrome://extensions → HypoManager → Podrobnosti → Možnosti rozšíření).
+2. Do pole **„URL API HypoManageru“** zadej adresu svého API (např. `https://tvoje-api.up.railway.app` bez koncového lomítka).
+3. Nastavení se ukládá automaticky. Pak v popupu zadej kód a klikni **Spárovat**.
+
+Pro vlastní doménu (např. `https://api.hypomanazer.cz`) je potřeba přidat ji do `manifest.json` do `host_permissions` a rozšíření znovu sestavit.
+
 ## Spárování s HypoManagerem (reálná data)
 
 1. **Backend:** V adresáři `server` spusť `npx prisma db push` (případně `prisma migrate dev`), aby v DB byly tabulky pro pairing. Spusť API: `npm run dev`.
