@@ -1,0 +1,375 @@
+// HypoManažer – datový model (PostgreSQL pro produkci / Railway)
+// Používá se při buildi pro produkci a když DATABASE_URL začíná na postgresql://
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ---
+enum LoanType {
+  PURCHASE
+  REFINANCE
+  NON_PURPOSE
+}
+
+enum LeadSource {
+  OWN
+  REFERRER
+  MARKETPLACE
+}
+
+enum LeadStatus {
+  DRAFT
+  SENT
+  OPENED
+  IN_PROGRESS
+  SUBMITTED
+  CONVERTED
+  EXPIRED
+  DISQUALIFIED
+}
+
+enum IntakeSessionState {
+  CREATED
+  SENT
+  OPENED
+  IN_PROGRESS
+  SUBMITTED
+  CONVERTED
+  EXPIRED
+}
+
+enum PersonRole {
+  APPLICANT
+  CO_APPLICANT
+}
+
+enum DocType {
+  ID_FRONT
+  ID_BACK
+  TAX_RETURN
+  BANK_STATEMENT
+  INCOME_CONFIRMATION
+  OTHER
+}
+
+enum UploadSlotStatus {
+  EMPTY
+  UPLOADED
+  PROCESSED
+  ERROR
+}
+
+enum LeadEventType {
+  LINK_CREATED
+  LINK_SENT_SMS
+  LINK_SENT_EMAIL
+  LINK_OPENED
+  INTAKE_PROGRESS
+  UPLOAD_ADDED
+  SUBMITTED
+  CONVERTED
+  EXPIRED
+  ERROR
+}
+
+enum ReferrerType {
+  ALLIANZ
+  REAL_ESTATE
+  DEVELOPER
+  INTERNAL
+  OTHER
+}
+
+enum PayoutMethod {
+  NONE
+  BANK_TRANSFER
+  INVOICE
+}
+
+enum ReferrerEventType {
+  CREATED
+  INVITED
+  LEAD_CREATED
+  STATUS_CHANGED
+  ERROR
+}
+
+enum UploadedBy {
+  CLIENT
+  ADVISOR
+  REFERRER
+}
+
+enum IncomeType {
+  EMPLOYED
+  SELF_EMPLOYED
+  BOTH
+}
+
+enum DealStatus {
+  NEW
+  DATA_EXTRACTED
+  SENT_TO_BANK
+  APPROVED
+  SIGNED_BY_CLIENT
+  CLOSED
+  LOST
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String     // bcrypt hash
+  name      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cases     Case[]
+  leads     Lead[]
+  referrers Referrer[]
+  browserExtensionPairings BrowserExtensionPairing[]
+  browserExtensionDevices   BrowserExtensionDevice[]
+  browserExtensionMappings  BrowserExtensionMapping[]
+}
+
+model Lead {
+  id                String       @id @default(cuid())
+  ownerUserId       String
+  owner             User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String?
+  loanType          LoanType
+  note              String?
+  source            LeadSource   @default(OWN)
+  referrerId        String?
+  referrer          Referrer?    @relation(fields: [referrerId], references: [id], onDelete: SetNull)
+  status            LeadStatus   @default(DRAFT)
+  convertedCase     Case?       @relation("LeadCase") // Case.leadId = this Lead
+  intakeSessionId   String?
+  intakeSession     IntakeSession?
+  visibility        String?      // PRIVATE | TEAM | MARKETPLACE
+  priceCzk         Int?
+  territory         String?
+  qualityScore      Int?
+  deletedAt         DateTime?    // soft delete – lead v koši
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  leadEvents        LeadEvent[]
+  @@unique([intakeSessionId])
+}
+
+model IntakeSession {
+  id            String             @id @default(cuid())
+  leadId        String             @unique
+  lead          Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tokenHash     String             @unique
+  intakeLink    String?            // plný odkaz pro kopírování (ukládáme při vytvoření/regeneraci)
+  expiresAt     DateTime
+  openedAt      DateTime?
+  submittedAt   DateTime?
+  consentAt     DateTime?
+  consentVersion String?
+  state         IntakeSessionState @default(CREATED)
+  ico           String?            // IČ zadané v intake (OSVČ) – zobrazí se v „Základní údaje z DP“
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  uploadSlots   UploadSlot[]
+}
+
+model UploadSlot {
+  id               String           @id @default(cuid())
+  intakeSessionId  String
+  intakeSession    IntakeSession    @relation(fields: [intakeSessionId], references: [id], onDelete: Cascade)
+  personRole       PersonRole
+  docType          DocType
+  period           String?
+  required         Boolean          @default(true)
+  status           UploadSlotStatus  @default(EMPTY)
+  storageKey       String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Case {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId          String?          @unique
+  lead            Lead?            @relation("LeadCase", fields: [leadId], references: [id], onDelete: SetNull)
+  loanType        String?          // převod z Lead.loanType po konverzi
+  jmeno           String           // hlavní klient (první osoba nebo ručně)
+  datum           String           // datum založení např. "13.2.2025"
+  status          String           @default("novy") // novy | data-vytazena | doplneno
+  dealStatus      DealStatus?      // pipeline: NEW, SENT_TO_BANK, APPROVED, ...
+  vyseUveru       Int?
+  ucel            String?
+  isActive        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  extractedData   ExtractedData[]
+  files           CaseFile[]
+  persons         Person[]
+  documents       Document[]
+}
+
+model Person {
+  id              String    @id @default(cuid())
+  caseId          String
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  role            PersonRole
+  firstName       String?
+  lastName        String?
+  birthNumber     String?
+  dob             String?
+  address         String?
+  docNumber       String?
+  docValidTo      String?
+  incomeType      IncomeType?
+  selfEmployedIco String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Document {
+  id          String     @id @default(cuid())
+  caseId      String
+  case        Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  personRole  PersonRole
+  docType     DocType
+  period      String?
+  storageKey  String
+  originalName String
+  mimeType    String?
+  sizeBytes   Int?
+  uploadedBy  UploadedBy
+  createdAt   DateTime   @default(now())
+}
+
+model LeadEvent {
+  id        String        @id @default(cuid())
+  leadId    String
+  lead      Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      LeadEventType
+  payload   String?       // JSON
+  createdAt DateTime      @default(now())
+}
+
+model Referrer {
+  id                  String           @id @default(cuid())
+  ownerUserId         String
+  owner               User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  type                ReferrerType
+  displayName         String
+  registrationNumber  String?
+  email               String?
+  phone               String?
+  payoutMethod        PayoutMethod     @default(NONE)
+  bankAccount         String?
+  invoiceCompanyName  String?
+  invoiceIco          String?
+  invoiceDic          String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  leads               Lead[]
+  referralLinks       ReferralLink[]
+  referrerEvents      ReferrerEvent[]
+}
+
+model ReferralLink {
+  id          String    @id @default(cuid())
+  referrerId  String
+  referrer    Referrer  @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ReferrerEvent {
+  id         String            @id @default(cuid())
+  referrerId String
+  referrer   Referrer          @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  type       ReferrerEventType
+  payload    String?            // JSON
+  createdAt  DateTime          @default(now())
+}
+
+model ExtractedData {
+  id              String   @id @default(cuid())
+  caseId          String
+  case            Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  personIndex     Int      @default(0)    // 0 = klient, 1 = partner, …
+  jmeno           String   @default("")
+  prijmeni        String   @default("")
+  rc              String   @default("")
+  adresa          String   @default("")
+  prijmy          Int      @default(0)    // v Kč
+  vydaje          Int      @default(0)    // v Kč
+  dpData          String?  // JSON: { "31": 12345, "37": 0, ... } – řádky DAP
+  vypisyPrijmy    String?  // JSON: příjmy z výpisů BU po měsících
+  cisloDokladu    String?  // číslo OP – vytaženo z OP
+  datumVydani     String?  // datum vydání OP
+  platnostDo      String?  // platnost OP do
+  vydavajiciUrad  String?  // vydávající úřad
+  opRawText       String?  // raw OCR/Doctly výstup – pro re-parse bez volání API
+  datumNarozeni   String?  // datum narození – z OP nebo z rodného čísla
+  mistoNarozeni   String?  // místo narození
+  pohlavi         String?  // M/Ž nebo Muž/Žena – z OP nebo z rodného čísla
+  narodnost       String?  // státní občanství
+  rodinnyStav     String?  // svobodný, ženatý, vdaná, rozvedený, vdovec, vdova
+  @@unique([caseId, personIndex])
+}
+
+model CaseFile {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  type      String   // op-predni | op-zadni | danove | vypisy
+  name      String   // původní název souboru
+  path      String   // relativní cesta na disku (uploads/caseId/filename)
+  mimeType  String?  @default("application/octet-stream")
+  createdAt DateTime @default(now())
+}
+
+// --- Integrace: rozšíření pro prohlížeč (pairing + refresh token) ---
+model BrowserExtensionPairing {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userCode  String    @unique  // kód zobrazený uživateli (např. ABCD-EFGH)
+  expiresAt DateTime
+  usedAt    DateTime? // po použití při pairing/confirm
+  createdAt DateTime  @default(now())
+}
+
+model BrowserExtensionDevice {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installationId   String   @unique  // UUID z rozšíření
+  refreshTokenHash String   // hash refresh tokenu
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+}
+
+// Mapping packy pro bankovní formuláře, ukládané z rozšíření přes API.
+model BrowserExtensionMapping {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankId     String
+  hostname   String   // např. "noby.cz" bez www
+  pathPrefix String   // např. "/modelation/mortgage"
+  packJson   String   // celé JSON tělo mapping packu
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, hostname, pathPrefix])
+}

@@ -35,23 +35,23 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">HypoManažer</h1>
-          <p className="text-gray-600 mt-1">Přihlaste se ke svému účtu</p>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">HypoManažer</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Přihlaste se ke svému účtu</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 text-sm">
               {error}
             </div>
           )}
 
           {isRegister && (
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Jméno (volitelné)
               </label>
               <input
@@ -59,14 +59,14 @@ export function Login() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Jan Novák"
               />
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               E-mail
             </label>
             <input
@@ -75,13 +75,13 @@ export function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="vas@email.cz"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Heslo
             </label>
             <input
@@ -91,7 +91,7 @@ export function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
             />
           </div>
@@ -99,20 +99,20 @@ export function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Počkejte…' : isRegister ? 'Registrovat' : 'Přihlásit se'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           {isRegister ? (
             <>
               Už máte účet?{' '}
               <button
                 type="button"
                 onClick={() => { setIsRegister(false); setError(''); }}
-                className="text-blue-600 font-medium hover:underline"
+                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
               >
                 Přihlásit se
               </button>
@@ -123,7 +123,7 @@ export function Login() {
               <button
                 type="button"
                 onClick={() => { setIsRegister(true); setError(''); }}
-                className="text-blue-600 font-medium hover:underline"
+                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
               >
                 Zaregistrovat se
               </button>

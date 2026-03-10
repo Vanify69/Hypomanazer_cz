@@ -30,7 +30,7 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
   return (
     <Link
       to={`/case/${caseData.id}`}
-      className="block bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-300 hover:shadow-md transition-all relative overflow-hidden"
+      className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all relative overflow-hidden"
     >
       {caseData.extractionInProgress && (
         <div className="absolute inset-x-0 top-0 h-1 bg-blue-100 overflow-hidden" aria-hidden>
@@ -39,7 +39,7 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
       )}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-lg text-gray-900">{caseData.jmeno}</h3>
+          <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{caseData.jmeno}</h3>
           {caseData.isActive && (
             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
           )}
@@ -54,20 +54,20 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
       </div>
       
       <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2 text-gray-600">
+        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
           <Calendar className="w-4 h-4" />
           <span>{formatDate(caseData.datum)}</span>
         </div>
         
         {caseData.vyseUveru && (
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
             <Banknote className="w-4 h-4" />
-            <span className="font-medium text-gray-900">{formatCurrency(caseData.vyseUveru)}</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(caseData.vyseUveru)}</span>
           </div>
         )}
         
         {caseData.ucel && (
-          <p className="text-gray-600 line-clamp-1">{caseData.ucel}</p>
+          <p className="text-gray-600 dark:text-gray-400 line-clamp-1">{caseData.ucel}</p>
         )}
       </div>
     </Link>

@@ -21,15 +21,15 @@ export function Sidebar() {
   ];
   
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col">
-      <div className="p-6 border-b border-gray-200">
+    <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen flex flex-col">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
             <FileText className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="font-semibold text-lg">HypoManager</h1>
-            <p className="text-xs text-gray-500">Zprostředkování hypoték</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Zprostředkování hypoték</p>
           </div>
         </div>
       </div>
@@ -44,8 +44,8 @@ export function Sidebar() {
                   to={item.path}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive(item.path)
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -57,16 +57,16 @@ export function Sidebar() {
         </ul>
       </nav>
       
-      <div className="p-4 border-t border-gray-200 space-y-2">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
         {user?.email && (
-          <p className="text-xs text-gray-500 truncate px-2" title={user.email}>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate px-2" title={user.email}>
             {user.email}
           </p>
         )}
         <button
           type="button"
           onClick={() => logout()}
-          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Odhlásit se
