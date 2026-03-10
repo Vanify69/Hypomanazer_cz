@@ -61,11 +61,8 @@ Aby React aplikace (přihlášení, leady, případy) běžela na Railway (např
 4. **Start**  
    Použije se `npm run start` – servíruje obsah `build/` přes `serve` na `PORT` (Railway ho nastaví sám).
 
-5. **Proměnná VITE_API_URL (důležité)**  
-   Frontend volá API podle `VITE_API_URL`. Tato proměnná se **zapisuje do buildu při `npm run build`**, takže ji musíte nastavit u této služby v **Variables** před buildem.  
-   - Název: `VITE_API_URL`  
-   - Hodnota: plná URL API, např. `https://hypomanazercz-production.up.railway.app` nebo později `https://api.hypomanazer.cz`.  
-   Bez ní by production build volal `http://localhost:4000` a přihlášení by nefungovalo.
+5. **URL API**  
+   Production frontend má URL API nastavenou v kódu (`src/lib/api.ts`). Žádná proměnná prostředí pro build není potřeba (Railpack by jinak vyžadoval secret a build by padal). Pro jinou API URL upravte v repu `src/lib/api.ts` a znovu nasaďte.
 
 6. **Port**  
    V **Settings → Public Networking** ponechejte výchozí chování (aplikace naslouchá na `PORT`).
@@ -73,7 +70,7 @@ Aby React aplikace (přihlášení, leady, případy) běžela na Railway (např
 7. **Doména**  
    Pro app subdoménu přidejte v této službě **Custom Domain** např. `app.hypomanazer.cz` a u poskytovatele DNS nastavte CNAME `app` na adresu, kterou Railway ukáže.
 
-**Shrnutí:** Druhá služba = kořen repo, build + start z kořene, **VITE_API_URL** = URL vašeho API. Po deployi otevřete URL služby – uvidíte přihlašovací stránku Hypo aplikace.
+**Shrnutí:** Druhá služba = kořen repo, build + start z kořene. Po deployi otevřete URL služby – uvidíte přihlašovací stránku Hypo aplikace.
 
 ---
 
