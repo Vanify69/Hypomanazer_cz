@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Plus, Copy, Send, Search, Pencil } from 'lucide-react';
-import { getLeads, regenerateLeadLink, sendLeadLink, createLeadIntake, type Lead } from '../lib/api';
+import { Plus, Copy, Send, Search, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
+import { getLeads, regenerateLeadLink, sendLeadLink, createLeadIntake, deleteLead, restoreLead, deleteLeadPermanently, type Lead } from '../lib/api';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Koncept',
@@ -61,16 +61,20 @@ export function Leads() {
   const [copyId, setCopyId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [showTrash, setShowTrash] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [permanentDeletingId, setPermanentDeletingId] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
-    getLeads({ q: q || undefined, status: statusFilter || undefined, loanType: loanTypeFilter || undefined, source: sourceFilter || undefined })
+    getLeads({ q: q || undefined, status: statusFilter || undefined, loanType: loanTypeFilter || undefined, source: sourceFilter || undefined, deleted: showTrash })
       .then(setLeads)
       .catch(() => setLeads([]))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, [statusFilter, loanTypeFilter, sourceFilter]);
+  useEffect(() => { load(); }, [statusFilter, loanTypeFilter, sourceFilter, showTrash]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,13 +84,28 @@ export function Leads() {
   const handleCopyLink = async (lead: Lead) => {
     if (copyId === lead.id) return;
     try {
-      const { intakeLink } = await regenerateLeadLink(lead.id);
-      await navigator.clipboard.writeText(intakeLink);
+      let link: string;
+      if (lead.intakeSession?.intakeLink) {
+        link = lead.intakeSession.intakeLink;
+      } else if (!lead.intakeSession) {
+        const res = await createLeadIntake(lead.id);
+        link = res.intakeLink;
+        load();
+      } else {
+        const res = await regenerateLeadLink(lead.id);
+        link = res.intakeLink;
+        load();
+      }
+      await navigator.clipboard.writeText(link);
       setCopyId(lead.id);
       setTimeout(() => setCopyId(null), 2000);
-      load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Nepodařilo se zkopírovat odkaz.');
+      const msg = err instanceof Error ? err.message : 'Nepodařilo se zkopírovat odkaz.';
+      if (msg.includes('nelze vygenerovat') || msg.includes('intake byl odeslán')) {
+        alert('U tohoto leadu není odkaz uložen (starší záznam). Odkaz byl již odeslán klientovi – zkontrolujte e-mail nebo SMS. Od nových leadů bude odkaz k dispozici ke zkopírování.');
+      } else {
+        alert(msg);
+      }
     }
   };
 
@@ -115,6 +134,44 @@ export function Leads() {
       alert(err instanceof Error ? err.message : 'Vygenerování odkazu se nepodařilo.');
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleDelete = async (lead: Lead) => {
+    if (!window.confirm(`Opravdu chcete smazat lead „${displayName(lead)}“? Přesune se do koše a budete ho moci později obnovit.`)) return;
+    setDeletingId(lead.id);
+    try {
+      await deleteLead(lead.id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Smazání se nepodařilo.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleRestore = async (lead: Lead) => {
+    setRestoringId(lead.id);
+    try {
+      await restoreLead(lead.id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Obnovení se nepodařilo.');
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  const handlePermanentDelete = async (lead: Lead) => {
+    if (!window.confirm(`Trvale odstranit lead „${displayName(lead)}“? Tuto akci nelze vrátit zpět.`)) return;
+    setPermanentDeletingId(lead.id);
+    try {
+      await deleteLeadPermanently(lead.id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Trvalé odstranění se nepodařilo.');
+    } finally {
+      setPermanentDeletingId(null);
     }
   };
 
@@ -153,6 +210,23 @@ export function Leads() {
             <Plus className="w-5 h-5" />
             Nový lead
           </Link>
+        </div>
+
+        <div className="mb-4 flex items-center gap-2 border-b border-gray-200">
+          <button
+            type="button"
+            onClick={() => setShowTrash(false)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${!showTrash ? 'bg-white border border-b-0 border-gray-200 text-gray-900 -mb-px' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Aktivní leady
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowTrash(true)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${showTrash ? 'bg-white border border-b-0 border-gray-200 text-gray-900 -mb-px' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Koš
+          </button>
         </div>
 
         <div className="mb-6 flex flex-wrap gap-4 items-end">
@@ -248,55 +322,91 @@ export function Leads() {
                         </td>
                         <td className="px-4 py-3 text-gray-600">{formatDate(lead.createdAt)}</td>
                         <td className="px-4 py-3 flex flex-wrap gap-2 items-center">
-                          <Link
-                            to={`/leads/${lead.id}/edit`}
-                            className="p-2 text-gray-500 hover:bg-gray-100 rounded"
-                            title="Upravit lead"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Link>
-                          {isConceptWithoutIntake ? (
-                            <button
-                              type="button"
-                              onClick={() => handleProcessLead(lead)}
-                              disabled={isProcessing}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50"
-                              title="Zpracovat lead a odeslat link na podklady"
-                            >
-                              {isProcessing ? 'Generuji…' : 'Zpracovat lead'}
-                            </button>
-                          ) : (
+                          {showTrash ? (
                             <>
                               <button
                                 type="button"
-                                onClick={() => handleCopyLink(lead)}
-                                disabled={lead.status === 'SUBMITTED' || lead.status === 'CONVERTED' || lead.status === 'EXPIRED'}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-50"
-                                title="Regenerovat a zkopírovat odkaz"
+                                onClick={() => handleRestore(lead)}
+                                disabled={restoringId === lead.id || permanentDeletingId === lead.id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+                                title="Obnovit lead z koše"
                               >
-                                {isCopying ? 'Zkopírováno' : <Copy className="w-4 h-4" />}
+                                <ArchiveRestore className="w-4 h-4" />
+                                {restoringId === lead.id ? 'Obnovuji…' : 'Obnovit'}
                               </button>
-                              {canSend && (
+                              <button
+                                type="button"
+                                onClick={() => handlePermanentDelete(lead)}
+                                disabled={restoringId === lead.id || permanentDeletingId === lead.id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                                title="Trvale odstranit lead"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                {permanentDeletingId === lead.id ? 'Odstraňuji…' : 'Trvale odstranit'}
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <Link
+                                to={`/leads/${lead.id}/edit`}
+                                className="p-2 text-gray-500 hover:bg-gray-100 rounded"
+                                title="Upravit lead"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Link>
+                              {isConceptWithoutIntake ? (
                                 <button
                                   type="button"
-                                  onClick={() => handleSendLink(lead)}
-                                  disabled={isSending}
-                                  className="p-2 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-50"
-                                  title="Poslat link (SMS / e-mail)"
+                                  onClick={() => handleProcessLead(lead)}
+                                  disabled={isProcessing}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+                                  title="Zpracovat lead a odeslat link na podklady"
                                 >
-                                  <Send className="w-4 h-4" />
+                                  {isProcessing ? 'Generuji…' : 'Zpracovat lead'}
                                 </button>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyLink(lead)}
+                                    disabled={lead.status === 'SUBMITTED' || lead.status === 'CONVERTED' || lead.status === 'EXPIRED'}
+                                    className="p-2 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-50"
+                                    title="Zkopírovat odkaz"
+                                  >
+                                    {isCopying ? 'Zkopírováno' : <Copy className="w-4 h-4" />}
+                                  </button>
+                                  {canSend && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSendLink(lead)}
+                                      disabled={isSending}
+                                      className="p-2 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-50"
+                                      title="Poslat link (SMS / e-mail)"
+                                    >
+                                      <Send className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(lead)}
+                                disabled={deletingId === lead.id}
+                                className="p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded disabled:opacity-50"
+                                title="Smazat lead (přesunout do koše)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              {lead.convertedCaseId && (
+                                <Link
+                                  to={`/case/${lead.convertedCaseId}`}
+                                  className="text-sm text-blue-600 hover:underline"
+                                  title="Otevřít případ"
+                                >
+                                  Případ
+                                </Link>
                               )}
                             </>
-                          )}
-                          {lead.convertedCaseId && (
-                            <Link
-                              to={`/case/${lead.convertedCaseId}`}
-                              className="text-sm text-blue-600 hover:underline"
-                              title="Otevřít případ"
-                            >
-                              Případ
-                            </Link>
                           )}
                         </td>
                       </tr>
@@ -307,7 +417,7 @@ export function Leads() {
             </div>
             {leads.length === 0 && (
               <div className="text-center py-12 text-gray-500">
-                Žádné leady. Vytvořte první lead tlačítkem Nový lead.
+                {showTrash ? 'Koš je prázdný.' : 'Žádné leady. Vytvořte první lead tlačítkem Nový lead.'}
               </div>
             )}
           </div>

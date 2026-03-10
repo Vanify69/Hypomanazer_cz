@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
-import { Upload, FolderOpen } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, FileUp } from 'lucide-react';
 import type { Applicant } from '../../lib/types';
 import { uploadCaseFile } from '../../lib/storage';
 import type { Case } from '../../lib/types';
@@ -17,6 +17,16 @@ function inferFileType(file: File): FileType {
   return 'vypisy';
 }
 
+function getFileTypeLabel(type: FileType): string {
+  switch (type) {
+    case 'op-predni': return 'OP přední strana';
+    case 'op-zadni': return 'OP zadní strana';
+    case 'danove': return 'Daňové přiznání';
+    case 'vypisy': return 'Výpis z účtu';
+    default: return type;
+  }
+}
+
 export interface AddCoApplicantModalProps {
   open: boolean;
   onClose: () => void;
@@ -26,8 +36,7 @@ export interface AddCoApplicantModalProps {
 }
 
 /**
- * Modal pro přidání spolužadatele – výběr složky, nahrání OP/DP/výpisů.
- * Používá SimpleModal (bez Radix), aby se okno vždy zobrazilo.
+ * Modal pro přidání spolužadatele – výběr jednotlivých souborů (OP, DP, výpisy), nahrání jen k tomuto žadateli.
  */
 export function AddCoApplicantModal({
   open,
@@ -36,40 +45,17 @@ export function AddCoApplicantModal({
   caseId,
   onUploadComplete,
 }: AddCoApplicantModalProps) {
-  console.log('[AddCoApplicantModal] render', { open, applicantId: applicant.id });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [folderLabel, setFolderLabel] = useState<string>('Nevybrána žádná složka');
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const el = fileInputRef.current;
-    if (el && open) {
-      el.setAttribute('webkitdirectory', '');
-      el.setAttribute('directory', '');
-    }
-    return () => {
-      if (el) {
-        el.removeAttribute('webkitdirectory');
-        el.removeAttribute('directory');
-      }
-    };
-  }, [open]);
-
-  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
     const list = Array.from(files);
     setSelectedFiles(list);
-    const first = list[0] as File & { webkitRelativePath?: string };
-    const path = first.webkitRelativePath
-      ? first.webkitRelativePath.split('/').slice(0, -1).join('/')
-      : list.length === 1
-        ? first.name
-        : null;
-    setFolderLabel(path || `${list.length} souborů vybráno`);
     setUploadError(null);
     e.target.value = '';
   };
@@ -78,9 +64,13 @@ export function AddCoApplicantModal({
     fileInputRef.current?.click();
   };
 
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleUploadAndAdd = async () => {
     if (!selectedFiles.length) {
-      setUploadError('Vyberte složku s dokumenty.');
+      setUploadError('Vyberte alespoň jeden soubor.');
       return;
     }
     setProcessing(true);
@@ -108,7 +98,6 @@ export function AddCoApplicantModal({
   const handleClose = () => {
     if (processing) return;
     setSelectedFiles([]);
-    setFolderLabel('Nevybrána žádná složka');
     setProgress(0);
     setUploadError(null);
     onClose();
@@ -118,42 +107,64 @@ export function AddCoApplicantModal({
     <SimpleModal open={open} onClose={handleClose} title="Přidat spolužadatele">
       <div className="space-y-4">
         <p className="text-sm text-gray-600">
-          Vyberte složku s podklady spolužadatele (OP, daňové přiznání, výpisy z účtu).
+          Vyberte jednotlivé soubory spolužadatele: OP (přední a zadní strana), daňové přiznání, výpisy z účtu.
         </p>
         {!processing ? (
           <>
             <div>
-              <label htmlFor="folder-display" className="block text-sm font-medium text-gray-700 mb-2">
-                Složka s podklady
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Soubory s podklady
               </label>
               <div className="flex gap-2">
                 <input
-                  id="folder-display"
-                  type="text"
-                  readOnly
-                  value={folderLabel}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
-                  placeholder="Nevybrána žádná složka"
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  aria-label="Vybrat soubory"
                 />
                 <button
                   type="button"
                   onClick={triggerBrowse}
                   className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  <FolderOpen className="w-4 h-4" />
-                  Procházet
+                  <FileUp className="w-4 h-4" />
+                  Vybrat soubory
                 </button>
+                {selectedFiles.length > 0 && (
+                  <span className="flex items-center text-sm text-gray-500">
+                    {selectedFiles.length} souborů vybráno
+                  </span>
+                )}
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFolderSelect}
-                aria-label="Vybrat složku s podklady"
-              />
+              {selectedFiles.length > 0 && (
+                <ul className="mt-3 space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-2">
+                  {selectedFiles.map((file, index) => (
+                    <li
+                      key={`${file.name}-${index}`}
+                      className="flex items-center justify-between gap-2 text-sm text-gray-700 py-1"
+                    >
+                      <span className="min-w-0 truncate" title={file.name}>
+                        {file.name}
+                        <span className="ml-2 text-gray-500 font-normal">
+                          ({getFileTypeLabel(inferFileType(file))})
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="flex-shrink-0 text-red-600 hover:text-red-700 text-xs font-medium"
+                      >
+                        Odebrat
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <p className="text-xs text-gray-500 mt-2">
-                Složka by měla obsahovat: OP (přední a zadní strana), daňové přiznání nebo výpisy z účtu.
+                Lze vybrat více souborů najednou (OP přední/zadní, daňové přiznání, výpisy z účtu). Formáty: obrázek nebo PDF.
               </p>
             </div>
             <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 text-sm text-blue-800">

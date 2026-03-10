@@ -1,7 +1,33 @@
-import { Keyboard, FolderOpen, FileSpreadsheet } from 'lucide-react';
+import { useState } from 'react';
+import { Keyboard, FolderOpen, FileSpreadsheet, Puzzle } from 'lucide-react';
 import { shortcuts } from '../lib/mockData';
+import { apiRequest } from '../lib/api';
 
 export function Settings() {
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingExpiresAt, setPairingExpiresAt] = useState<string | null>(null);
+  const [pairingLoading, setPairingLoading] = useState(false);
+  const [pairingError, setPairingError] = useState<string | null>(null);
+
+  async function handleGeneratePairingCode() {
+    setPairingLoading(true);
+    setPairingError(null);
+    setPairingCode(null);
+    setPairingExpiresAt(null);
+    try {
+      const data = await apiRequest<{ userCode: string; expiresAt: string }>(
+        '/api/integrations/browser-extension/pairing/start',
+        { method: 'POST', body: {} }
+      );
+      setPairingCode(data.userCode);
+      setPairingExpiresAt(data.expiresAt);
+    } catch (e) {
+      setPairingError(e instanceof Error ? e.message : 'Nepodařilo se vygenerovat kód.');
+    } finally {
+      setPairingLoading(false);
+    }
+  }
+
   return (
     <div className="flex-1 bg-gray-50 overflow-auto">
       <div className="max-w-5xl mx-auto p-8">
@@ -9,6 +35,48 @@ export function Settings() {
         <p className="text-gray-600 mb-8">Konfigurace aplikace a klávesových zkratek</p>
         
         <div className="space-y-6">
+          {/* Integrace – Rozšíření pro prohlížeč */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Puzzle className="w-5 h-5" />
+                Rozšíření pro prohlížeč
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Spáruj rozšíření HypoManager Bank Autofill, aby mohlo načítat aktivní případ a vyplňovat bankovní formuláře.
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              {pairingError && (
+                <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{pairingError}</p>
+              )}
+              {pairingCode ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Kód pro spárování (platný 5 minut):</p>
+                  <p className="text-2xl font-mono font-semibold tracking-wider text-gray-900 bg-gray-100 px-4 py-3 rounded-lg inline-block">
+                    {pairingCode}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Otevři rozšíření v prohlížeči, vlož tento kód a klikni na „Spárovat“. Po vypršení vygeneruj nový kód.
+                  </p>
+                  {pairingExpiresAt && (
+                    <p className="text-xs text-gray-500">
+                      Vyprší: {new Date(pairingExpiresAt).toLocaleString('cs-CZ')}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleGeneratePairingCode}
+                disabled={pairingLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {pairingLoading ? 'Generuji…' : 'Vygenerovat kód'}
+              </button>
+            </div>
+          </div>
+
           {/* Klávesové zkratky */}
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-200">

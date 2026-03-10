@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "HypoManager Bank Autofill",
+  "version": "0.1.0",
+  "description": "Bezpečné vyplňování bankovních formulářů z aktivního případu v HypoManageru.",
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "HypoManager Autofill"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:4000/*",
+    "http://localhost:3000/*",
+    "https://noby.cz/*",
+    "https://www.noby.cz/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "http://localhost:4000/test-autofill.html",
+        "http://127.0.0.1:4000/test-autofill.html",
+        "https://noby.cz/*",
+        "https://www.noby.cz/*"
+      ],
+      "js": [
+        "content/content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "fill-all": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+V",
+        "mac": "Command+Shift+V"
+      },
+      "description": "Vyplnit všechna dostupná pole"
+    },
+    "next-applicant": {
+      "suggested_key": { "default": "Ctrl+Shift+9" },
+      "description": "Přepnout na dalšího žadatele"
+    }
+  },
+  "options_page": "options/index.html"
+}

@@ -84,8 +84,22 @@
       open: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:4000',
+          target: 'http://127.0.0.1:4000',
           changeOrigin: true,
+          configure: (proxy) => {
+            let lastLog = 0;
+            proxy.on('error', (err: NodeJS.ErrnoException, _req, res) => {
+              if (res && !res.headersSent && (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET')) {
+                const now = Date.now();
+                if (now - lastLog > 60000) {
+                  console.warn('[vite] API backend nedostupný (127.0.0.1:4000). Spusťte: cd server && npm run dev');
+                  lastLog = now;
+                }
+                res.writeHead(502, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Backend nedostupný' }));
+              }
+            });
+          },
         },
       },
     },

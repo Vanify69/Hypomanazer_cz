@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, Copy, Send } from 'lucide-react';
 import { createLead, sendLeadLink } from '../lib/api';
 import { ReferrerSelect } from '../components/leads/ReferrerSelect';
+import { SimpleModal } from '../components/modals/SimpleModal';
 
 const LOAN_TYPES = [
   { value: 'PURCHASE', label: 'Koupě' },
@@ -29,6 +30,7 @@ export function LeadsNew() {
   } | null>(null);
   const [copyDone, setCopyDone] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ sms: boolean; email: boolean } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,12 +92,20 @@ export function LeadsNew() {
       const channels: ('sms' | 'email')[] = [];
       if (hasPhone) channels.push('sms');
       if (hasEmail) channels.push('email');
-      await sendLeadLink(created.id, channels);
+      const res = await sendLeadLink(created.id, channels);
+      setSendResult(res.sent);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Odeslání se nepodařilo.');
     } finally {
       setSending(false);
     }
+  };
+
+  const getSendSuccessMessage = (sent: { sms: boolean; email: boolean }) => {
+    if (sent.sms && sent.email) return 'Klientovi byl odeslán e-mail i SMS s linkem na dodání podkladů.';
+    if (sent.email) return 'Klientovi byl odeslán e-mail s linkem na dodání podkladů.';
+    if (sent.sms) return 'Klientovi byl odeslán SMS s linkem na dodání podkladů.';
+    return 'Odeslání proběhlo.';
   };
 
   if (created) {
@@ -147,6 +157,30 @@ export function LeadsNew() {
               Odkaz uložte nebo pošlete klientovi. V plné verzi bude odesílání probíhat přes frontu úloh.
             </p>
           </div>
+          <SimpleModal
+            open={sendResult !== null}
+            onClose={() => {
+              setSendResult(null);
+              navigate('/leads');
+            }}
+            title="Odesláno"
+          >
+            {sendResult && (
+              <>
+                <p className="text-gray-700 mb-4">{getSendSuccessMessage(sendResult)}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSendResult(null);
+                    navigate('/leads');
+                  }}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  OK
+                </button>
+              </>
+            )}
+          </SimpleModal>
         </div>
       </div>
     );

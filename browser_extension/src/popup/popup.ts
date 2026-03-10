@@ -1,0 +1,181 @@
+/**
+ * HypoManager Bank Autofill – popup UI
+ * Pairing, výběr žadatele, akce vyplnění, zobrazení reportu, admin: procházení DOM a export mapping packu.
+ */
+
+const pairForm = document.getElementById("pair-form") as HTMLFormElement | null;
+const pairCodeInput = document.getElementById("pair-code") as HTMLInputElement | null;
+const pairStatus = document.getElementById("pair-status") as HTMLElement | null;
+const loadCaseBtn = document.getElementById("load-case") as HTMLButtonElement | null;
+const fillAllBtn = document.getElementById("fill-all") as HTMLButtonElement | null;
+const caseInfo = document.getElementById("case-info") as HTMLElement | null;
+const fillReport = document.getElementById("fill-report") as HTMLElement | null;
+const adminSection = document.getElementById("admin-mapping-section") as HTMLElement | null;
+const domScanBtn = document.getElementById("dom-scan-btn") as HTMLButtonElement | null;
+const domScanStatus = document.getElementById("dom-scan-status") as HTMLElement | null;
+const domMappingList = document.getElementById("dom-mapping-list") as HTMLElement | null;
+const exportMappingBtn = document.getElementById("export-mapping-btn") as HTMLButtonElement | null;
+const exportOutput = document.getElementById("export-output") as HTMLTextAreaElement | null;
+
+const MAPPING_PATH_OPTIONS: { value: string; label: string; source: "applicant" | "loan" | "property"; path: string }[] = [
+  { value: "", label: "— nemapovat", source: "applicant", path: "" },
+  { value: "applicant.firstName", label: "Jméno", source: "applicant", path: "firstName" },
+  { value: "applicant.lastName", label: "Příjmení", source: "applicant", path: "lastName" },
+  { value: "applicant.birthNumber", label: "Rodné číslo", source: "applicant", path: "birthNumber" },
+  { value: "applicant.dateOfBirth", label: "Datum narození", source: "applicant", path: "dateOfBirth" },
+  { value: "applicant.address", label: "Adresa", source: "applicant", path: "address" },
+  { value: "applicant.income.netMonthly", label: "Příjmy (měsíc)", source: "applicant", path: "income.netMonthly" },
+  { value: "applicant.expenses.totalMonthly", label: "Výdaje (měsíc)", source: "applicant", path: "expenses.totalMonthly" },
+  { value: "loan.amount", label: "Výše úvěru", source: "loan", path: "amount" },
+  { value: "loan.purpose", label: "Účel úvěru", source: "loan", path: "purpose" },
+  { value: "property.value", label: "Odhad ceny nemovitosti", source: "property", path: "value" },
+];
+
+type ScanField = { selector: string; label: string; tagName: string; name: string; id: string; type: string };
+let lastScanData: { url: string; hostname: string; pathname: string; fields: ScanField[] } | null = null;
+const fieldMappingChoices: Record<number, string> = {};
+
+function showPairStatus(paired: boolean) {
+  if (!pairStatus) return;
+  pairStatus.textContent = paired ? "Spárováno s HypoManagerem" : "Není spárováno";
+  pairStatus.className = paired ? "status ok" : "status warn";
+}
+
+async function init() {
+  const res = await chrome.runtime.sendMessage({ type: "PAIR_STATUS" });
+  showPairStatus(res?.paired ?? false);
+  const { adminMappingTools } = await chrome.storage.local.get("adminMappingTools");
+  if (adminSection) adminSection.hidden = !adminMappingTools;
+}
+
+pairForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = pairCodeInput?.value?.trim();
+  if (!code) return;
+  const res = await chrome.runtime.sendMessage({ type: "PAIR_SUBMIT_CODE", code });
+  if (res?.ok) {
+    showPairStatus(true);
+    pairCodeInput!.value = "";
+  } else {
+    pairStatus!.textContent = "Chyba: " + (res?.error ?? "neznámá");
+    pairStatus!.className = "status error";
+  }
+});
+
+loadCaseBtn?.addEventListener("click", async () => {
+  if (!caseInfo) return;
+  caseInfo.textContent = "Načítám…";
+  const res = await chrome.runtime.sendMessage({ type: "GET_ACTIVE_CASE" });
+  if (res?.ok && res.model) {
+    const m = res.model;
+    caseInfo.textContent = `Případ ${m.caseId} · ${m.applicants?.length ?? 0} žadatel(é)`;
+  } else {
+    caseInfo.textContent = res?.error ?? "Žádný aktivní případ";
+  }
+});
+
+fillAllBtn?.addEventListener("click", async () => {
+  if (!fillReport) return;
+  fillReport.textContent = "Vyplňuji…";
+  const res = await chrome.runtime.sendMessage({ type: "FILL_ALL" });
+  if (res?.ok && res.result) {
+    const r = res.result;
+    const lines = [
+      `Vyplněno: ${r.filled?.length ?? 0}`,
+      `Nenalezeno: ${r.missing?.length ?? 0}`,
+      `Chyby: ${r.errors?.length ?? 0}`,
+    ];
+    fillReport.textContent = lines.join("\n");
+  } else {
+    fillReport.textContent = "Chyba: " + (res?.error ?? "neznámá");
+  }
+});
+
+// --- Admin: procházení DOM a export mapping packu ---
+domScanBtn?.addEventListener("click", async () => {
+  if (!domScanStatus || !domMappingList) return;
+  domScanStatus.textContent = "Načítám pole ze stránky…";
+  domMappingList.innerHTML = "";
+  lastScanData = null;
+  Object.keys(fieldMappingChoices).forEach((k) => delete fieldMappingChoices[Number(k)]);
+  if (exportMappingBtn) exportMappingBtn.disabled = true;
+  if (exportOutput) exportOutput.value = "";
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) {
+    domScanStatus.textContent = "Žádná aktivní záložka.";
+    return;
+  }
+  const res = await chrome.runtime.sendMessage({ type: "RUN_DOM_SCAN", tabId: tab.id });
+  if (!res?.ok) {
+    domScanStatus.textContent = "Chyba: " + (res?.error ?? "neznámá");
+    return;
+  }
+  const data = res.data as { url: string; hostname: string; pathname: string; fields: ScanField[] } | null;
+  lastScanData = data;
+  if (!data?.fields?.length) {
+    domScanStatus.textContent = `Nalezeno 0 polí (${data?.hostname ?? ""}${data?.pathname ?? ""})`;
+    return;
+  }
+  domScanStatus.textContent = `Nalezeno ${data.fields.length} polí (${data.hostname}${data.pathname})`;
+  if (exportMappingBtn) exportMappingBtn.disabled = false;
+
+  data.fields.forEach((f: ScanField, i: number) => {
+    const row = document.createElement("div");
+    row.className = "dom-row";
+    const sel = document.createElement("span");
+    sel.className = "sel";
+    sel.title = f.selector;
+    sel.textContent = f.label || f.selector || `#${i}`;
+    const select = document.createElement("select");
+    select.dataset.index = String(i);
+    MAPPING_PATH_OPTIONS.forEach((opt) => {
+      const o = document.createElement("option");
+      o.value = opt.value;
+      o.textContent = opt.label;
+      select.appendChild(o);
+    });
+    select.addEventListener("change", () => {
+      fieldMappingChoices[i] = select.value;
+    });
+    row.appendChild(sel);
+    row.appendChild(select);
+    domMappingList.appendChild(row);
+  });
+});
+
+exportMappingBtn?.addEventListener("click", () => {
+  if (!lastScanData || !exportOutput) return;
+  const hostname = lastScanData.hostname.replace(/^www\./, "");
+  const pathPart = lastScanData.pathname || "/";
+  const fields = lastScanData.fields
+    .map((f, i) => ({ ...f, mapping: fieldMappingChoices[i] }))
+    .filter((f) => f.mapping);
+  const valueFrom = (val: string) => {
+    if (!val) return null;
+    const opt = MAPPING_PATH_OPTIONS.find((o) => o.value === val);
+    if (!opt || !opt.path) return null;
+    return { source: opt.source, path: opt.path };
+  };
+  const pack = {
+    bankId: hostname.split(".")[0] || "bank",
+    version: `${hostname}-${new Date().toISOString().slice(0, 10)}`,
+    match: { hostnames: [hostname], pathIncludes: [pathPart] },
+    steps: [
+      {
+        stepId: "main",
+        detectAny: fields.slice(0, 2).map((f) => f.selector),
+        fields: fields.map((f) => ({
+          fieldId: (f.mapping as string).replace(/\./g, "_"),
+          label: f.label || f.selector,
+          selectors: [f.selector],
+          kind: f.tagName === "select" ? "select" : f.type === "number" ? "number" : "text",
+          valueFrom: valueFrom(f.mapping as string),
+        })),
+      },
+    ],
+  };
+  exportOutput.value = JSON.stringify(pack, null, 2);
+});
+
+init();

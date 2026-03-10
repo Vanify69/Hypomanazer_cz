@@ -132,6 +132,8 @@ model User {
   cases     Case[]
   leads     Lead[]
   referrers Referrer[]
+  browserExtensionPairings BrowserExtensionPairing[]
+  browserExtensionDevices   BrowserExtensionDevice[]
 }
 
 model Lead {
@@ -155,6 +157,7 @@ model Lead {
   priceCzk         Int?
   territory         String?
   qualityScore      Int?
+  deletedAt         DateTime?    // soft delete – lead v koši
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   leadEvents        LeadEvent[]
@@ -166,6 +169,7 @@ model IntakeSession {
   leadId        String             @unique
   lead          Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
   tokenHash     String             @unique
+  intakeLink    String?            // plný odkaz pro kopírování (ukládáme při vytvoření/regeneraci)
   expiresAt     DateTime
   openedAt      DateTime?
   submittedAt   DateTime?
@@ -331,4 +335,25 @@ model CaseFile {
   path      String   // relativní cesta na disku (uploads/caseId/filename)
   mimeType  String?  @default("application/octet-stream")
   createdAt DateTime @default(now())
+}
+
+// --- Integrace: rozšíření pro prohlížeč (pairing + refresh token) ---
+model BrowserExtensionPairing {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userCode  String    @unique  // kód zobrazený uživateli (např. ABCD-EFGH)
+  expiresAt DateTime
+  usedAt    DateTime? // po použití při pairing/confirm
+  createdAt DateTime  @default(now())
+}
+
+model BrowserExtensionDevice {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installationId   String   @unique  // UUID z rozšíření
+  refreshTokenHash String   // hash refresh tokenu
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
 }

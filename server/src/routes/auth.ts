@@ -10,72 +10,96 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
 
 // Registrace
 router.post("/register", async (req, res) => {
-  const { email, password, name } = req.body as {
-    email?: string;
-    password?: string;
-    name?: string;
-  };
+  try {
+    const { email, password, name } = req.body as {
+      email?: string;
+      password?: string;
+      name?: string;
+    };
 
-  if (!email?.trim() || !password?.trim()) {
-    res.status(400).json({ error: "E-mail a heslo jsou povinné." });
-    return;
+    if (!email?.trim() || !password?.trim()) {
+      res.status(400).json({ error: "E-mail a heslo jsou povinné." });
+      return;
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    if (existing) {
+      res.status(400).json({ error: "Účet s tímto e-mailem již existuje." });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email: email.trim().toLowerCase(),
+        password: hashedPassword,
+        name: name?.trim() || null,
+      },
+      select: { id: true, email: true, name: true },
+    });
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET as jwt.Secret,
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+    );
+
+    res.status(201).json({
+      user: { id: user.id, email: user.email, name: user.name },
+      token,
+    });
+  } catch (err) {
+    console.error("[auth] Chyba při registraci:", err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Registrace se nepodařila. Zkuste to později.",
+    });
   }
-
-  const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
-  if (existing) {
-    res.status(400).json({ error: "Účet s tímto e-mailem již existuje." });
-    return;
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: {
-      email: email.trim().toLowerCase(),
-      password: hashedPassword,
-      name: name?.trim() || null,
-    },
-    select: { id: true, email: true, name: true },
-  });
-
-  const token = jwt.sign(
-    { userId: user.id, email: user.email },
-    JWT_SECRET as jwt.Secret,
-    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
-  );
-
-  res.status(201).json({
-    user: { id: user.id, email: user.email, name: user.name },
-    token,
-  });
 });
 
 // Přihlášení
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body as { email?: string; password?: string };
+  try {
+    const { email, password } = req.body as { email?: string; password?: string };
 
-  if (!email?.trim() || !password) {
-    res.status(400).json({ error: "E-mail a heslo jsou povinné." });
-    return;
+    if (!email?.trim() || !password) {
+      res.status(400).json({ error: "E-mail a heslo jsou povinné." });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+    if (!user) {
+      res.status(401).json({ error: "Nesprávný e-mail nebo heslo." });
+      return;
+    }
+    if (!user.password) {
+      console.error("[auth] User bez hesla:", user.id);
+      res.status(500).json({ error: "Účet nemá nastavené heslo. Kontaktujte podporu." });
+      return;
+    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      res.status(401).json({ error: "Nesprávný e-mail nebo heslo." });
+      return;
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET as jwt.Secret,
+      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+    );
+
+    res.json({
+      user: { id: user.id, email: user.email, name: user.name },
+      token,
+    });
+  } catch (err) {
+    console.error("[auth] Chyba při přihlášení:", err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Přihlášení se nepodařilo. Zkuste to později.",
+    });
   }
-
-  const user = await prisma.user.findUnique({
-    where: { email: email.trim().toLowerCase() },
-  });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    res.status(401).json({ error: "Nesprávný e-mail nebo heslo." });
-    return;
-  }
-
-  const token = jwt.sign(
-    { userId: user.id, email: user.email },
-    JWT_SECRET as jwt.Secret,
-    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
-  );
-
-  res.json({
-    user: { id: user.id, email: user.email, name: user.name },
-    token,
-  });
 });
 
 // Aktuální uživatel (pro ověření tokenu)

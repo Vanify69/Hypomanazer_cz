@@ -19,6 +19,7 @@ import {
   normalizeNameForMatch,
   type VypisyExtractResult,
 } from "../lib/extractVypisy.js";
+import { caseToFillModel } from "../lib/fillModel.js";
 
 /** Najde personIndex osoby, která nejlépe odpovídá jménu držitele účtu z výpisu. */
 function findPersonIndexByHolderName(
@@ -59,6 +60,20 @@ function getPersonIndexFromApplicantId(applicantId?: string | null): number | nu
 
 const router = Router();
 router.use(requireAuth);
+
+/** Případy, u kterých právě běží extrakce (DP/OP/výpisy) – pro progress na kartě v přehledu. */
+const caseIdsWithActiveExtraction = new Set<string>();
+
+function setExtractionInProgress(caseId: string, inProgress: boolean): void {
+  if (inProgress) caseIdsWithActiveExtraction.add(caseId);
+  else caseIdsWithActiveExtraction.delete(caseId);
+}
+
+function toCaseResponseWithProgress(c: any): any {
+  const out = toCaseResponse(c);
+  out.extractionInProgress = caseIdsWithActiveExtraction.has(c.id);
+  return out;
+}
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -195,7 +210,7 @@ router.patch("/:id/status", async (req, res) => {
     where: { id: caseId },
     include: { extractedData: true, files: true },
   });
-  res.json(toCaseResponse(updated));
+  res.json(toCaseResponseWithProgress(updated));
 });
 
 // Seznam případů přihlášeného uživatele
@@ -206,7 +221,7 @@ router.get("/", async (req, res) => {
     orderBy: { updatedAt: "desc" },
     include: { extractedData: true, files: true },
   });
-  res.json(cases.map(toCaseResponse));
+  res.json(cases.map(toCaseResponseWithProgress));
 });
 
 // Jeden případ
@@ -220,7 +235,7 @@ router.get("/:id", async (req, res) => {
     res.status(404).json({ error: "Případ nenalezen." });
     return;
   }
-  res.json(toCaseResponse(c));
+  res.json(toCaseResponseWithProgress(c));
 });
 
 // Aktivní případ (pro zkratky)
@@ -234,7 +249,21 @@ router.get("/active/current", async (req, res) => {
     res.json({ case: null });
     return;
   }
-  res.json({ case: toCaseResponse(c) });
+  res.json({ case: toCaseResponseWithProgress(c) });
+});
+
+// FillModel pro rozšíření prohlížeče (aktivní případ → normalizovaná data pro vyplňování)
+router.get("/active/current/fill-model", async (req, res) => {
+  const userId = (req as any).user.userId;
+  const c = await prisma.case.findFirst({
+    where: { userId, isActive: true },
+    include: { extractedData: true },
+  });
+  if (!c) {
+    res.status(404).json({ error: "Nemáš aktivní případ. Zvol případ v HypoManageru a označ ho jako aktivní." });
+    return;
+  }
+  res.json(caseToFillModel(c));
 });
 
 // Vytvoření případu
@@ -289,7 +318,7 @@ router.post("/", async (req, res) => {
     where: { id: c.id },
     include: { extractedData: true, files: true },
   });
-  res.status(201).json(toCaseResponse(updated!));
+  res.status(201).json(toCaseResponseWithProgress(updated!));
 });
 
 // Nový případ z více souborů (daňové, výpisy, 2+ OP – klient + partner)
@@ -552,7 +581,7 @@ router.post("/from-files", uploadMemory.array("files", 20), async (req, res) => 
     where: { id: caseId },
     include: { extractedData: true, files: true },
   });
-  res.status(201).json(toCaseResponse(updated!));
+  res.status(201).json(toCaseResponseWithProgress(updated!));
 });
 
 // Aktualizace případu
@@ -640,7 +669,7 @@ router.patch("/:id", async (req, res) => {
     where: { id: req.params.id },
     include: { extractedData: true, files: true },
   });
-  res.json(toCaseResponse(updated!));
+  res.json(toCaseResponseWithProgress(updated!));
 });
 
 // Nastavení aktivního případu
@@ -667,7 +696,7 @@ router.post("/:id/active", async (req, res) => {
     where: { id },
     include: { extractedData: true, files: true },
   });
-  res.json(toCaseResponse(updated!));
+  res.json(toCaseResponseWithProgress(updated!));
 });
 
 // Smazání případu
@@ -703,7 +732,7 @@ router.delete("/:id/files/:fileId", async (req, res) => {
     where: { id: caseId },
     include: { extractedData: true, files: true },
   });
-  res.status(200).json(toCaseResponse(updated!));
+  res.status(200).json(toCaseResponseWithProgress(updated!));
 });
 
 // Upload souboru k případu
@@ -877,7 +906,7 @@ router.post("/:id/files", (req, res, next) => {
     where: { id: caseId },
     include: { extractedData: true, files: true },
   });
-  res.status(201).json(toCaseResponse(updated!));
+  res.status(201).json(toCaseResponseWithProgress(updated!));
 });
 
 // Nahraj a parsuj raw text z Doctly (když automatický upload nedostane data)
@@ -904,30 +933,38 @@ router.post("/:id/dp/parse-raw", async (req, res) => {
     return;
   }
 
-  let reparsed = extractDapFromText(rawText, `parse-raw:${caseId}:${personIndex}`);
-  reparsed = await enrichParsedDapFromAres(reparsed);
-  const json = JSON.stringify(reparsed);
-  await prisma.extractedData.upsert({
-    where: { caseId_personIndex: { caseId, personIndex } },
-    create: {
-      caseId,
-      personIndex,
-      jmeno: "",
-      prijmeni: "",
-      rc: "",
-      adresa: "",
-      prijmy: 0,
-      vydaje: 0,
-      dpData: json,
-    },
-    update: { dpData: json },
-  });
+  setExtractionInProgress(caseId, true);
+  try {
+    let reparsed = extractDapFromText(rawText, `parse-raw:${caseId}:${personIndex}`);
+    reparsed = await enrichParsedDapFromAres(reparsed);
+    const json = JSON.stringify(reparsed);
+    await prisma.extractedData.upsert({
+      where: { caseId_personIndex: { caseId, personIndex } },
+      create: {
+        caseId,
+        personIndex,
+        jmeno: "",
+        prijmeni: "",
+        rc: "",
+        adresa: "",
+        prijmy: 0,
+        vydaje: 0,
+        dpData: json,
+      },
+      update: { dpData: json },
+    });
 
-  const updated = await prisma.case.findUnique({
-    where: { id: caseId },
-    include: { extractedData: true, files: true },
-  });
-  res.status(200).json(toCaseResponse(updated!));
+    const updated = await prisma.case.findUnique({
+      where: { id: caseId },
+      include: { extractedData: true, files: true },
+    });
+    res.status(200).json(toCaseResponseWithProgress(updated!));
+  } catch (err) {
+    console.error("[cases] DP parse-raw selhal:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Načtení dat z textu selhalo." });
+  } finally {
+    setExtractionInProgress(caseId, false);
+  }
 });
 
 // Re-parse DP z již uloženého raw textu (bez volání Doctly, bez kreditů)
@@ -970,18 +1007,43 @@ router.post("/:id/dp/reparse", async (req, res) => {
     return;
   }
 
-  let reparsed = extractDapFromText(rawText, `cached:${caseId}:${personIndex}`);
-  reparsed = await enrichParsedDapFromAres(reparsed);
-  await prisma.extractedData.update({
-    where: { caseId_personIndex: { caseId, personIndex } },
-    data: { dpData: JSON.stringify(reparsed) },
-  });
+  setExtractionInProgress(caseId, true);
+  try {
+    let reparsed = extractDapFromText(rawText, `cached:${caseId}:${personIndex}`);
+    reparsed = await enrichParsedDapFromAres(reparsed);
+    // Při re-parsu zachovat předchozí IČ/DIČ, pokud nový výstup z Doctly je neplatný (např. chybný CZ02)
+    const prevMeta = parsed?.meta;
+    if (prevMeta && reparsed.meta) {
+      if (!reparsed.meta.icoCandidate && prevMeta.icoCandidate) {
+        reparsed = { ...reparsed, meta: { ...reparsed.meta, icoCandidate: prevMeta.icoCandidate } };
+      }
+      if (!reparsed.meta.dicNormalized && prevMeta.dicNormalized && /^CZ\d{8,10}$/.test(String(prevMeta.dicNormalized).replace(/\s/g, ""))) {
+        reparsed = {
+          ...reparsed,
+          meta: {
+            ...reparsed.meta,
+            dic: prevMeta.dic ?? reparsed.meta.dic,
+            dicNormalized: prevMeta.dicNormalized,
+          },
+        };
+      }
+    }
+    await prisma.extractedData.update({
+      where: { caseId_personIndex: { caseId, personIndex } },
+      data: { dpData: JSON.stringify(reparsed) },
+    });
 
-  const updated = await prisma.case.findUnique({
-    where: { id: caseId },
-    include: { extractedData: true, files: true },
-  });
-  res.status(200).json(toCaseResponse(updated!));
+    const updated = await prisma.case.findUnique({
+      where: { id: caseId },
+      include: { extractedData: true, files: true },
+    });
+    res.status(200).json(toCaseResponseWithProgress(updated!));
+  } catch (err) {
+    console.error("[cases] DP reparse selhal:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Znovu načtení dat selhalo." });
+  } finally {
+    setExtractionInProgress(caseId, false);
+  }
 });
 
 // Doplnit IČ a CZ-NACE z ARES podle DIČ z DP
@@ -1040,14 +1102,11 @@ router.post("/:id/dp/ares-enrich", requireAuth, async (req, res) => {
   }
 
   if (aresResult.ico == null && aresResult.czNacePrevazujici == null) {
-    res.status(200).json(
-      toCaseResponse(
-        await prisma.case.findUnique({
-          where: { id: caseId },
-          include: { extractedData: true, files: true },
-        })!
-      )
-    );
+    const c = await prisma.case.findUnique({
+      where: { id: caseId },
+      include: { extractedData: true, files: true },
+    });
+    res.status(200).json(toCaseResponseWithProgress(c!));
     return;
   }
 
@@ -1069,7 +1128,7 @@ router.post("/:id/dp/ares-enrich", requireAuth, async (req, res) => {
     where: { id: caseId },
     include: { extractedData: true, files: true },
   });
-  res.status(200).json(toCaseResponse(updated!));
+  res.status(200).json(toCaseResponseWithProgress(updated!));
 });
 
 // Re-parse OP z již uloženého raw textu (bez volání OCR/LLM)
@@ -1105,7 +1164,7 @@ router.post("/:id/op/reparse", async (req, res) => {
     where: { id: caseId },
     include: { extractedData: true, files: true },
   });
-  res.status(200).json(toCaseResponse(updated!));
+  res.status(200).json(toCaseResponseWithProgress(updated!));
 });
 
 // Re-parse výpisů z již uložených souborů (bez znovu-nahrávání)
@@ -1185,7 +1244,7 @@ router.post("/:id/vypisy/reparse", async (req, res) => {
     where: { id: caseId },
     include: { extractedData: true, files: true },
   });
-  res.status(200).json(toCaseResponse(updated!));
+  res.status(200).json(toCaseResponseWithProgress(updated!));
 });
 
 export { router as casesRouter };

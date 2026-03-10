@@ -335,6 +335,13 @@ function detectDic(fullText: string): {
     }
     return { dic: null, normalized: null, confidence: "none", rodneCislo: rc, warnings };
   }
+  // Platné DIČ: CZ + 8 číslic (IČO) nebo CZ + 9–10 číslic (rodné číslo). Jinak jde např. o CZ-NACE (CZ02…).
+  const isValidIco = /^CZ\d{8}$/.test(dic);
+  const isValidRc = /^CZ\d{9,10}$/.test(dic);
+  if (!isValidIco && !isValidRc) {
+    warnings.push(`Z textu bylo vytaženo „${dic}“, což není platné DIČ (očekáváno CZ + 8 číslic nebo CZ + 9–10 číslic).`);
+    return { dic: null, normalized: null, confidence: "none", rodneCislo: rc, warnings };
+  }
   const mIco = /^CZ(\d{8})$/.exec(dic);
   const icoCandidate = mIco ? mIco[1] : null;
   return { dic, normalized: dic, confidence: "direct", rodneCislo: rc, icoCandidate, warnings };

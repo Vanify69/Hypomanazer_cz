@@ -104,9 +104,6 @@ export function ReferrerSelect({ value, onChange, disabled, placeholder = 'Hleda
                 className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-900"
               >
                 {r.displayName}
-                {r.registrationNumber && (
-                  <span className="ml-2 text-gray-500 text-sm">IČO {r.registrationNumber}</span>
-                )}
               </li>
             ))}
         </ul>

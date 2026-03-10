@@ -104,23 +104,50 @@ export function toLegacyDapExtractResult(parsed: ParsedDapFo): DapExtractResult 
 }
 
 /**
- * Doplní IČ a CZ-NACE podle DIČ. CZ+8 číslic: ARES (IČO + CZ-NACE). CZ+9/10 číslic (rodné číslo): IČ = číselná část DIČ, CZ-NACE z ARES není k dispozici.
+ * Doplní IČ a CZ-NACE podle DIČ nebo podle IČ. CZ+8 číslic (IČO): ARES vrátí IČ i CZ-NACE.
+ * CZ+9/10 číslic (rodné číslo): IČ = číselná část DIČ, CZ-NACE z ARES není.
+ * Pokud máme jen IČ (icoCandidate) bez platného DIČ, dotáhneme alespoň CZ-NACE z ARES.
  */
 export async function enrichParsedDapFromAres(parsed: ParsedDapFo): Promise<ParsedDapFo> {
   const dic = String(parsed.meta?.dicNormalized ?? "").trim().toUpperCase().replace(/\s+/g, "");
-  if (!/^CZ\d{8,10}$/.test(dic)) return parsed;
-  try {
-    const ares = await getAresDataFromDic(dic);
-    if (ares.ico == null && ares.czNacePrevazujici == null) return parsed;
-    return {
-      ...parsed,
-      meta: {
-        ...parsed.meta,
-        ...(ares.ico != null && { icoCandidate: ares.ico }),
-        ...(ares.czNacePrevazujici != null && { czNacePrevazujici: ares.czNacePrevazujici }),
-      },
-    };
-  } catch {
-    return parsed;
+  const ico = String(parsed.meta?.icoCandidate ?? "").trim().replace(/\s+/g, "");
+
+  // 1) Platné DIČ (CZ + 8 nebo 9–10 číslic) → ARES podle DIČ
+  if (/^CZ\d{8,10}$/.test(dic)) {
+    try {
+      const ares = await getAresDataFromDic(dic);
+      if (ares.ico != null || ares.czNacePrevazujici != null) {
+        return {
+          ...parsed,
+          meta: {
+            ...parsed.meta,
+            ...(ares.ico != null && { icoCandidate: ares.ico }),
+            ...(ares.czNacePrevazujici != null && { czNacePrevazujici: ares.czNacePrevazujici }),
+          },
+        };
+      }
+    } catch {
+      // pokračujeme – zkusíme ještě IČ
+    }
   }
+
+  // 2) Nemáme platné DIČ, ale máme IČ (8 číslic) → dotáhnout jen CZ-NACE z ARES
+  if (/^\d{8}$/.test(ico)) {
+    try {
+      const ares = await getAresDataFromDic("CZ" + ico);
+      if (ares.czNacePrevazujici != null) {
+        return {
+          ...parsed,
+          meta: {
+            ...parsed.meta,
+            czNacePrevazujici: ares.czNacePrevazujici,
+          },
+        };
+      }
+    } catch {
+      // necháme parsed beze změny
+    }
+  }
+
+  return parsed;
 }

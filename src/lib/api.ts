@@ -153,7 +153,7 @@ export interface Lead {
   convertedCaseId?: string;
   createdAt: string;
   updatedAt: string;
-  intakeSession?: { id: string; state: string; expiresAt: string };
+  intakeSession?: { id: string; state: string; expiresAt: string; intakeLink?: string };
 }
 
 export async function getLeads(params?: {
@@ -161,12 +161,14 @@ export async function getLeads(params?: {
   loanType?: string;
   source?: string;
   q?: string;
+  deleted?: boolean;
 }): Promise<Lead[]> {
   const search = new URLSearchParams();
   if (params?.status) search.set('status', params.status);
   if (params?.loanType) search.set('loanType', params.loanType);
   if (params?.source) search.set('source', params.source);
   if (params?.q) search.set('q', params.q);
+  if (params?.deleted) search.set('deleted', 'true');
   const qs = search.toString();
   return apiRequest<Lead[]>(`/api/leads${qs ? `?${qs}` : ''}`);
 }
@@ -230,6 +232,21 @@ export async function regenerateLeadLink(id: string): Promise<{
 
 export async function expireLead(id: string): Promise<{ ok: boolean }> {
   return apiRequest(`/api/leads/${id}/expire`, { method: 'POST' });
+}
+
+/** Přesun leadu do koše (soft delete). */
+export async function deleteLead(id: string): Promise<{ ok: boolean }> {
+  return apiRequest(`/api/leads/${id}/delete`, { method: 'POST' });
+}
+
+/** Obnovení leadu z koše. */
+export async function restoreLead(id: string): Promise<{ ok: boolean }> {
+  return apiRequest(`/api/leads/${id}/restore`, { method: 'POST' });
+}
+
+/** Trvalé odstranění leadu (pouze z koše). */
+export async function deleteLeadPermanently(id: string): Promise<{ ok: boolean }> {
+  return apiRequest(`/api/leads/${id}`, { method: 'DELETE' });
 }
 
 /** Vytvoření intake odkazů u leadu v konceptu (např. lead od tipaře bez vygenerovaného odkazu). */

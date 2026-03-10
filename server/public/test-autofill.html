@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Test – HypoManager Autofill</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.25rem; margin-bottom: 1rem; }
+    label { display: block; margin-top: 0.75rem; font-weight: 500; color: #374151; }
+    input, textarea { width: 100%; padding: 0.5rem; margin-top: 0.25rem; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; }
+    #autofill-form { background: #f9fafb; padding: 1.5rem; border-radius: 8px; }
+    .hint { font-size: 0.875rem; color: #6b7280; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Testovací formulář pro rozšíření HypoManager Bank Autofill</h1>
+  <p class="hint">Otevři rozšíření, klikni „Vyplnit vše“ – pole níže se vyplní z aktivního případu.</p>
+
+  <form id="autofill-form">
+    <label for="firstName">Jméno</label>
+    <input type="text" id="firstName" name="firstName" autocomplete="off" />
+
+    <label for="lastName">Příjmení</label>
+    <input type="text" id="lastName" name="lastName" autocomplete="off" />
+
+    <label for="birthNumber">Rodné číslo</label>
+    <input type="text" id="birthNumber" name="birthNumber" autocomplete="off" />
+
+    <label for="address">Adresa</label>
+    <textarea id="address" name="address" rows="2" autocomplete="off"></textarea>
+
+    <label for="income">Příjmy (Kč/měsíc)</label>
+    <input type="number" id="income" name="income" autocomplete="off" />
+
+    <label for="loanAmount">Výše úvěru (Kč)</label>
+    <input type="number" id="loanAmount" name="loanAmount" autocomplete="off" />
+  </form>
+</body>
+</html>

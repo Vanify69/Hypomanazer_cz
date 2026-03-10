@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { Case } from '../../lib/types';
 import { StatusBadge } from './StatusBadge';
-import { Calendar, Banknote, Star } from 'lucide-react';
+import { Calendar, Banknote, Star, Loader2 } from 'lucide-react';
 
 interface CaseCardProps {
   case: Case;
@@ -30,13 +30,24 @@ export function CaseCard({ case: caseData }: CaseCardProps) {
   return (
     <Link
       to={`/case/${caseData.id}`}
-      className="block bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-300 hover:shadow-md transition-all"
+      className="block bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-300 hover:shadow-md transition-all relative overflow-hidden"
     >
+      {caseData.extractionInProgress && (
+        <div className="absolute inset-x-0 top-0 h-1 bg-blue-100 overflow-hidden" aria-hidden>
+          <div className="h-full min-w-[40%] w-1/3 animate-pulse bg-blue-500 rounded-r" />
+        </div>
+      )}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-lg text-gray-900">{caseData.jmeno}</h3>
           {caseData.isActive && (
             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+          )}
+          {caseData.extractionInProgress && (
+            <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium" title="Zpracovávají se data">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Zpracovávám data…
+            </span>
           )}
         </div>
         <StatusBadge status={caseData.status} />

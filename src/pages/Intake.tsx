@@ -114,14 +114,14 @@ export function Intake() {
     }
   };
 
-  const handleBankStatementFiles = async (files: FileList | null) => {
-    if (!token || !files?.length || bankStatementSlots.length === 0) return;
-    const emptyIndices = bankStatementSlots
+  const handleBankStatementFiles = async (affectedSlots: UploadSlot[], files: FileList | null) => {
+    if (!token || !files?.length || affectedSlots.length === 0) return;
+    const emptyIndices = affectedSlots
       .map((s, i) => (s.status !== 'UPLOADED' ? i : -1))
       .filter((i) => i >= 0);
     const toUpload = Math.min(files.length, emptyIndices.length);
     for (let i = 0; i < toUpload; i++) {
-      const slotId = bankStatementSlots[emptyIndices[i]].id;
+      const slotId = affectedSlots[emptyIndices[i]].id;
       setUploadingSlot(slotId);
       const form = new FormData();
       form.append('slotId', slotId);
@@ -144,11 +144,11 @@ export function Intake() {
     setData(updated);
   };
 
-  const handleClearAllBankSlots = async () => {
-    if (!token || bankSlotIds.length === 0) return;
+  const handleClearBankSlots = async (slotIds: string[]) => {
+    if (!token || slotIds.length === 0) return;
     setClearingSlot('bank-all');
     try {
-      for (const slotId of bankSlotIds) {
+      for (const slotId of slotIds) {
         await apiRequestPublic(`/api/intake/${token}/slots/${slotId}`, { method: 'DELETE' });
       }
       const updated = await apiRequestPublic<IntakeData>(`/api/intake/${token}`);
@@ -245,6 +245,133 @@ export function Intake() {
   const bankAllUploaded = showBankStatements && bankUploadedCount === bankStatementSlots.length;
   const bankSlotIds = bankStatementSlots.map((s) => s.id);
 
+  const applicantOtherSlots = otherSlots.filter((s) => s.personRole === 'APPLICANT');
+  const coApplicantOtherSlots = otherSlots.filter((s) => s.personRole === 'CO_APPLICANT');
+  const applicantBankSlots = bankStatementSlots.filter((s) => s.personRole === 'APPLICANT');
+  const coApplicantBankSlots = bankStatementSlots.filter((s) => s.personRole === 'CO_APPLICANT');
+
+  const renderSlotRow = (slot: UploadSlot) => (
+    <div
+      key={slot.id}
+      className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-700">
+          {DOC_LABELS[slot.docType] ?? slot.docType}
+          {slot.required && ' *'}
+        </p>
+        {slot.period && (
+          <p className="text-xs text-gray-500 mt-0.5">Období: {slot.period}</p>
+        )}
+      </div>
+      <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
+        {slot.status === 'UPLOADED' ? (
+          <>
+            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 text-green-700 text-sm font-medium border border-green-200">
+              <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden />
+              Nahráno
+            </div>
+            <button
+              type="button"
+              onClick={() => handleClearSlot(slot.id)}
+              disabled={clearingSlot === slot.id}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            >
+              {clearingSlot === slot.id ? '…' : 'Změnit'}
+            </button>
+          </>
+        ) : (
+          <label className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-w-[180px] px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm">
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              className="sr-only"
+              disabled={uploadingSlot !== null}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(slot.id, f);
+                e.target.value = '';
+              }}
+            />
+            {uploadingSlot === slot.id ? (
+              'Nahrávám…'
+            ) : (
+              <>
+                <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                </svg>
+                <span>Vybrat soubor</span>
+                <span className="text-blue-200 text-xs hidden sm:inline">(foto / galerie)</span>
+              </>
+            )}
+          </label>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderBankBlock = (slots: UploadSlot[], sectionKey: string) => {
+    if (slots.length === 0) return null;
+    const uploaded = slots.filter((s) => s.status === 'UPLOADED').length;
+    const allUploaded = uploaded === slots.length;
+    const slotIds = slots.map((s) => s.id);
+    return (
+      <div key={sectionKey} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-700">
+            Výpis z účtu (6 výpisů z různých měsíců) *
+          </p>
+        </div>
+        <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
+          {allUploaded ? (
+            <>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 text-green-700 text-sm font-medium border border-green-200">
+                <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden />
+                Nahráno 6/6
+              </div>
+              <button
+                type="button"
+                onClick={() => handleClearBankSlots(slotIds)}
+                disabled={clearingSlot === 'bank-all'}
+                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                {clearingSlot === 'bank-all' ? '…' : 'Změnit'}
+              </button>
+            </>
+          ) : (
+            <label className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-w-[200px] px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                className="sr-only"
+                multiple
+                disabled={uploadingSlot !== null}
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files?.length) handleBankStatementFiles(slots, files);
+                  e.target.value = '';
+                }}
+              />
+              {uploadingSlot ? (
+                'Nahrávám…'
+              ) : (
+                <>
+                  <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  </svg>
+                  <span>Vybrat až 6 souborů</span>
+                </>
+              )}
+            </label>
+          )}
+          {uploaded > 0 && !allUploaded && (
+            <span className="text-sm text-gray-600">Nahráno {uploaded}/6</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
@@ -293,124 +420,38 @@ export function Intake() {
             )}
           </div>
 
-          <div className="space-y-3 mb-8">
+          <div className="space-y-6 mb-8">
             <h2 className="font-medium text-gray-900">Dokumenty</h2>
             <p className="text-sm text-gray-500 sm:hidden">
               Na telefonu u každého tlačítka zvolte „Vyfotit“ nebo „Galerie / Soubory“.
             </p>
-            {otherSlots.map((slot) => (
-              <div
-                key={slot.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-700">
-                    {DOC_LABELS[slot.docType] ?? slot.docType}
-                    {slot.required && ' *'}
-                  </p>
-                  {slot.period && (
-                    <p className="text-xs text-gray-500 mt-0.5">Období: {slot.period}</p>
-                  )}
-                </div>
-                <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
-                  {slot.status === 'UPLOADED' ? (
-                    <>
-                      <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 text-green-700 text-sm font-medium border border-green-200">
-                        <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden />
-                        Nahráno
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleClearSlot(slot.id)}
-                        disabled={clearingSlot === slot.id}
-                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {clearingSlot === slot.id ? '…' : 'Změnit'}
-                      </button>
-                    </>
-                  ) : (
-                    <label className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-w-[180px] px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm">
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        className="sr-only"
-                          disabled={uploadingSlot !== null}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleFile(slot.id, f);
-                            e.target.value = '';
-                          }}
-                        />
-                        {uploadingSlot === slot.id ? (
-                          'Nahrávám…'
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            </svg>
-                            <span>Vybrat soubor</span>
-                            <span className="text-blue-200 text-xs hidden sm:inline">(foto / galerie)</span>
-                          </>
-                        )}
-                      </label>
-                    )}
-                  </div>
-                </div>
-            ))}
-            {showBankStatements && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-700">
-                    Výpis z účtu (6 výpisů z různých měsíců) *
-                  </p>
-                </div>
-                <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
-                  {bankAllUploaded ? (
-                    <>
-                      <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 text-green-700 text-sm font-medium border border-green-200">
-                        <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden />
-                        Nahráno 6/6
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleClearAllBankSlots}
-                        disabled={clearingSlot === 'bank-all'}
-                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {clearingSlot === 'bank-all' ? '…' : 'Změnit'}
-                      </button>
-                    </>
-                  ) : (
-                    <label className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-w-[200px] px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm">
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        className="sr-only"
-                        multiple
-                        disabled={uploadingSlot !== null}
-                        onChange={(e) => {
-                          const files = e.target.files;
-                          if (files?.length) handleBankStatementFiles(files);
-                          e.target.value = '';
-                        }}
-                      />
-                      {uploadingSlot ? (
-                        'Nahrávám…'
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          </svg>
-                          <span>Vybrat až 6 souborů</span>
-                        </>
-                      )}
-                    </label>
-                  )}
-                  {bankUploadedCount > 0 && !bankAllUploaded && (
-                    <span className="text-sm text-gray-600">Nahráno {bankUploadedCount}/6</span>
-                  )}
-                </div>
+
+            {/* Hlavní žadatel */}
+            <section className="space-y-3 rounded-xl border-2 border-blue-100 bg-blue-50/30 p-4">
+              <h3 className="text-base font-semibold text-blue-900 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500" aria-hidden />
+                Hlavní žadatel
+              </h3>
+              <p className="text-xs text-gray-600">Dokumenty hlavního žadatele (OP, daňové přiznání, výpisy)</p>
+              <div className="space-y-3">
+                {applicantOtherSlots.map((slot) => renderSlotRow(slot))}
+                {renderBankBlock(applicantBankSlots, 'bank-applicant')}
               </div>
+            </section>
+
+            {/* Spolužadatel – jen když má spolužadatele */}
+            {hasCoApplicant && (coApplicantOtherSlots.length > 0 || coApplicantBankSlots.length > 0) && (
+              <section className="space-y-3 rounded-xl border-2 border-slate-200 bg-slate-50/50 p-4">
+                <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-slate-500" aria-hidden />
+                  Spolužadatel
+                </h3>
+                <p className="text-xs text-gray-600">Dokumenty spolužadatele (OP, daňové přiznání, výpisy)</p>
+                <div className="space-y-3">
+                  {coApplicantOtherSlots.map((slot) => renderSlotRow(slot))}
+                  {renderBankBlock(coApplicantBankSlots, 'bank-coapplicant')}
+                </div>
+              </section>
             )}
           </div>
 

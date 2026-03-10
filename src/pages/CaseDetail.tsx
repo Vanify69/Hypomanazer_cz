@@ -206,36 +206,6 @@ function normalizeDpBasic(
   };
 }
 
-/** Mock spolužadatelé pro zobrazení sekce Žadatelé, když v DB není případ se spolužadateli (pouze UI). */
-const MOCK_CO_APPLICANTS: Applicant[] = [
-  {
-    id: 'mock-co-1',
-    role: 'spoluzadatel',
-    order: 2,
-    extractedData: {
-      jmeno: 'Pavel',
-      prijmeni: 'Svoboda',
-      rc: '801215/3456',
-      adresa: '',
-      prijmy: 0,
-      vydaje: 0,
-    },
-  },
-  {
-    id: 'mock-co-2',
-    role: 'spoluzadatel',
-    order: 3,
-    extractedData: {
-      jmeno: 'Jana',
-      prijmeni: 'Nová',
-      rc: '925628/7812',
-      adresa: '',
-      prijmy: 0,
-      vydaje: 0,
-    },
-  },
-];
-
 export function CaseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -290,15 +260,6 @@ export function CaseDetail() {
   const currentApplicant = applicants.find((a) => a.id === activeApplicantId);
   const activeRealApplicant = applicants.find((a) => a.id === activeApplicantId) ?? applicants[0] ?? null;
 
-  /** Pro zobrazení: když je jen 1 žadatel, doplníme mock spolužadatele, aby byla sekce Žadatelé vždy vidět. */
-  const displayApplicants =
-    applicants.length >= 2
-      ? applicants
-      : applicants.length === 1
-        ? [...applicants, ...MOCK_CO_APPLICANTS]
-        : [];
-  const mockApplicantIds = applicants.length >= 2 ? new Set<string>() : new Set(MOCK_CO_APPLICANTS.map((a) => a.id));
-
   const getApplicantDisplayName = (a: Applicant): string => {
     if (a.extractedData?.jmeno || a.extractedData?.prijmeni)
       return [a.extractedData.jmeno, a.extractedData.prijmeni].filter(Boolean).join(' ').trim();
@@ -309,11 +270,7 @@ export function CaseDetail() {
   const caseDisplayName = mainApplicant && hasMainName ? getApplicantDisplayName(mainApplicant) : (caseData?.jmeno ?? '');
 
   const handleAddCoApplicant = (): void => {
-    console.log('[CaseDetail] handleAddCoApplicant voláno', { caseData: !!caseData, applicantsCount: caseData?.applicants?.length });
-    if (!caseData) {
-      console.log('[CaseDetail] handleAddCoApplicant: return – žádný caseData');
-      return;
-    }
+    if (!caseData) return;
     const list = caseData.applicants ?? [];
     if (list.length >= 4) {
       alert('Maximálně 4 žadatelé.');
@@ -325,13 +282,18 @@ export function CaseDetail() {
       role: list.length === 0 ? 'hlavni' : 'spoluzadatel',
       order,
     };
-    console.log('[CaseDetail] handleAddCoApplicant: nastavuji state', { newApplicantId: newApplicant.id });
     setAddModalApplicant(newApplicant);
     setShowAddCoApplicantModal(true);
-    // Uložení až po vykreslení modalu (dáváme do fronty)
+    // Vždy posílat data všech stávajících žadatelů + prázdný záznam pro nového, aby backend nesmazal původního (personIndex 0)
+    const baseEmpty = { jmeno: '', prijmeni: '', rc: '', adresa: '', prijmy: 0, vydaje: 0 };
+    const extractedDataForSave: ExtractedData[] = [
+      ...list.map((a, i) => ({ ...(a.extractedData ?? baseEmpty), personIndex: i })),
+      { ...baseEmpty, personIndex: list.length },
+    ];
     const payload = {
       ...caseData,
       applicants: [...list, newApplicant],
+      extractedData: extractedDataForSave,
       activeApplicantId: newApplicant.id,
     };
     setTimeout(() => {
@@ -348,9 +310,6 @@ export function CaseDetail() {
 
   const handleTabChange = async (applicantId: string) => {
     setActiveApplicantId(applicantId);
-    if (mockApplicantIds.has(applicantId)) {
-      return;
-    }
     if (caseData) {
       const updated = await saveCase({ ...caseData, activeApplicantId: applicantId });
       setCaseData(updated);
@@ -368,14 +327,22 @@ export function CaseDetail() {
       ...rest.map((a, i) => ({ ...a, role: 'spoluzadatel' as const, order: i + 2 })),
     ];
     const newMainName = getApplicantDisplayName(chosen);
+    // Přeřadit extractedData v DB: zvolený na personIndex 0, původní hlavní na 1, aby po refreshi zůstal hlavní žadatel a jméno případu
+    const baseEmpty = { jmeno: '', prijmeni: '', rc: '', adresa: '', prijmy: 0, vydaje: 0 };
+    const extractedDataForSave: ExtractedData[] = reordered.map((a, i) => {
+      const base = a.extractedData ?? baseEmpty;
+      return { ...base, personIndex: i };
+    });
     const updated = await saveCase({
       ...caseData,
       jmeno: newMainName || caseData.jmeno,
       applicants: reordered,
+      extractedData: extractedDataForSave,
       activeApplicantId: reordered[0].id,
     });
     setCaseData(updated);
-    setActiveApplicantId(reordered[0].id);
+    // Aktivní karta = nový hlavní žadatel (první v seznamu po uložení), aby šlo z druhé karty znovu přepnout zpět
+    setActiveApplicantId(updated.applicants?.[0]?.id ?? reordered[0].id);
   };
 
   const handleRemoveApplicant = async (applicantId: string) => {
@@ -792,15 +759,14 @@ export function CaseDetail() {
           </div>
 
           {/* Boxík žadatelů – uvnitř téhož bílého okna; zobrazit i při 0 žadatelích */}
-          {displayApplicants.length > 0 ? (
+          {applicants.length > 0 ? (
             <ApplicantPanels
-              applicants={displayApplicants}
+              applicants={applicants}
               activeApplicantId={activeApplicantId}
               onSelect={handleTabChange}
               onSetMain={handleSetMainApplicant}
               onRemove={(applicantId) => setApplicantToRemoveId(applicantId)}
               onAdd={handleAddCoApplicant}
-              mockApplicantIds={mockApplicantIds}
               realApplicantCount={applicants.length}
               embedded
             />
@@ -1553,28 +1519,7 @@ export function CaseDetail() {
         />
       )}
 
-      {applicantToRemoveId && mockApplicantIds.has(applicantToRemoveId) && (
-        <SimpleModal
-          open
-          onClose={() => setApplicantToRemoveId(null)}
-          title="Ukázková karta"
-        >
-          <p className="text-sm text-gray-600 mb-4">
-            Toto je ukázková karta spolužadatele. Pro přidání skutečného spolužadatele použijte tlačítko „Přidat žadatele“ nebo „Přidat spolužadatele“. Po přidání můžete spolužadatele kdykoli odebrat ikonou koše.
-          </p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setApplicantToRemoveId(null)}
-              className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-            >
-              Zavřít
-            </button>
-          </div>
-        </SimpleModal>
-      )}
-
-      {applicantToRemoveId && !mockApplicantIds.has(applicantToRemoveId) && (
+      {applicantToRemoveId && (
         <ConfirmModal
           open
           onClose={() => setApplicantToRemoveId(null)}

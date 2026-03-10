@@ -32,7 +32,7 @@ function toLeadResponse(lead: {
   status: LeadStatus;
   createdAt: Date;
   updatedAt: Date;
-  intakeSession?: { id: string; state: string; expiresAt: Date } | null;
+  intakeSession?: { id: string; state: string; expiresAt: Date; intakeLink?: string | null } | null;
   convertedCase?: { id: string } | null;
   referrer?: { id: string; displayName: string } | null;
 }) {
@@ -57,6 +57,7 @@ function toLeadResponse(lead: {
           id: lead.intakeSession.id,
           state: lead.intakeSession.state,
           expiresAt: lead.intakeSession.expiresAt.toISOString(),
+          intakeLink: lead.intakeSession.intakeLink ?? undefined,
         }
       : undefined,
   };
@@ -105,6 +106,8 @@ router.post("/", async (req: Request, res: Response) => {
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
   const expiresAt = getIntakeExpiresAt();
+  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+  const intakeLink = `${baseUrl}/intake/${rawToken}`;
 
   const lead = await prisma.lead.create({
     data: {
@@ -125,6 +128,7 @@ router.post("/", async (req: Request, res: Response) => {
     data: {
       leadId: lead.id,
       tokenHash,
+      intakeLink,
       expiresAt,
       state: IntakeSessionState.CREATED,
     },
@@ -159,9 +163,6 @@ router.post("/", async (req: Request, res: Response) => {
       payload: JSON.stringify({ sessionId: session.id }),
     },
   });
-
-  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-  const intakeLink = `${baseUrl}/intake/${rawToken}`;
 
   const withReferrer = referrerId
     ? await prisma.lead.findUnique({
@@ -262,9 +263,11 @@ router.get("/", async (req: Request, res: Response) => {
   const q = req.query.q as string | undefined;
   const from = req.query.from as string | undefined;
   const to = req.query.to as string | undefined;
+  const deleted = req.query.deleted === "true";
 
   const where = {
     ownerUserId: userId,
+    deletedAt: deleted ? { not: null } : null,
     ...(status && { status: status as LeadStatus }),
     ...(loanType && { loanType: loanType as LoanType }),
     ...(source && { source: source as LeadSource }),
@@ -347,11 +350,14 @@ router.post("/:id/create-intake", async (req: Request, res: Response) => {
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
   const expiresAt = getIntakeExpiresAt();
+  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+  const intakeLink = `${baseUrl}/intake/${rawToken}`;
 
   const session = await prisma.intakeSession.create({
     data: {
       leadId: lead.id,
       tokenHash,
+      intakeLink,
       expiresAt,
       state: IntakeSessionState.CREATED,
     },
@@ -372,9 +378,6 @@ router.post("/:id/create-intake", async (req: Request, res: Response) => {
   await prisma.leadEvent.create({
     data: { leadId: lead.id, type: LeadEventType.LINK_CREATED, payload: JSON.stringify({ sessionId: session.id }) },
   });
-
-  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-  const intakeLink = `${baseUrl}/intake/${rawToken}`;
 
   res.json({
     intakeLink,
@@ -479,14 +482,13 @@ router.post("/:id/regenerate-link", async (req: Request, res: Response) => {
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
   const expiresAt = getIntakeExpiresAt();
+  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+  const intakeLink = `${baseUrl}/intake/${rawToken}`;
 
   await prisma.intakeSession.update({
     where: { id: lead.intakeSession.id },
-    data: { tokenHash, expiresAt },
+    data: { tokenHash, intakeLink, expiresAt },
   });
-
-  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-  const intakeLink = `${baseUrl}/intake/${rawToken}`;
 
   res.json({
     ok: true,
@@ -522,6 +524,74 @@ router.post("/:id/expire", async (req: Request, res: Response) => {
     data: { leadId: lead.id, type: LeadEventType.EXPIRED, payload: "{}" },
   });
 
+  res.json({ ok: true });
+});
+
+/** POST /api/leads/:id/delete – přesun do koše (soft delete) */
+router.post("/:id/delete", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+
+  const lead = await prisma.lead.findFirst({
+    where: { id, ownerUserId: userId },
+  });
+  if (!lead) {
+    res.status(404).json({ error: "Lead nenalezen." });
+    return;
+  }
+  if (lead.deletedAt) {
+    res.status(400).json({ error: "Lead je již v koši." });
+    return;
+  }
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { deletedAt: new Date() },
+  });
+  res.json({ ok: true });
+});
+
+/** POST /api/leads/:id/restore – obnovení leadu z koše */
+router.post("/:id/restore", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+
+  const lead = await prisma.lead.findFirst({
+    where: { id, ownerUserId: userId },
+  });
+  if (!lead) {
+    res.status(404).json({ error: "Lead nenalezen." });
+    return;
+  }
+  if (!lead.deletedAt) {
+    res.status(400).json({ error: "Lead není v koši." });
+    return;
+  }
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { deletedAt: null },
+  });
+  res.json({ ok: true });
+});
+
+/** DELETE /api/leads/:id – trvalé odstranění leadu (pouze z koše) */
+router.delete("/:id", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+
+  const lead = await prisma.lead.findFirst({
+    where: { id, ownerUserId: userId },
+  });
+  if (!lead) {
+    res.status(404).json({ error: "Lead nenalezen." });
+    return;
+  }
+  if (!lead.deletedAt) {
+    res.status(400).json({ error: "Trvalé odstranění jen u leadů v koši. Nejprve lead smažte (přesuňte do koše)." });
+    return;
+  }
+  await prisma.lead.delete({
+    where: { id: lead.id },
+  });
   res.json({ ok: true });
 });
 

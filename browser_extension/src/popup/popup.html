@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HypoManager Autofill</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <h1>HypoManager Bank Autofill</h1>
+
+  <section>
+    <h2>Spárování</h2>
+    <p id="pair-status" class="status warn">—</p>
+    <form id="pair-form">
+      <input type="text" id="pair-code" placeholder="Kód (např. ABCD-EFGH)" autocomplete="off" />
+      <button type="submit">Spárovat</button>
+    </form>
+    <p class="hint">Kód získáš v HypoManageru v Nastavení → Integrace.</p>
+  </section>
+
+  <section>
+    <h2>Aktivní případ</h2>
+    <p id="case-info">—</p>
+    <button id="load-case">Načíst případ</button>
+  </section>
+
+  <section>
+    <h2>Vyplnit formulář</h2>
+    <p>Otevři stránku banky a klikni na „Vyplnit vše“.</p>
+    <button id="fill-all">Vyplnit vše</button>
+    <div id="fill-report"></div>
+  </section>
+
+  <section id="admin-mapping-section" class="admin-only" hidden>
+    <h2>Správa mappingů (admin)</h2>
+    <p class="hint">Otevři stránku banky v této záložce, pak klikni níže. Pole ze stránky namapuj a exportuj do mapping packu.</p>
+    <button id="dom-scan-btn">Procházet DOM na této stránce</button>
+    <div id="dom-scan-status"></div>
+    <div id="dom-mapping-list"></div>
+    <button id="export-mapping-btn" disabled>Exportovat mapping pack (JSON)</button>
+    <textarea id="export-output" readonly rows="6" class="export-output"></textarea>
+  </section>
+
+  <script type="module" src="./popup.js"></script>
+</body>
+</html>
