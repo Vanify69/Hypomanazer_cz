@@ -362,3 +362,19 @@
     grid-column: span 1;
   }
 }
+
+/* Leady / Tipaři: karty jen do 768px, tabulka od 768px (nezávisle na Tailwind md:) */
+.agenda-cards-only {
+  display: block;
+}
+.agenda-table-only {
+  display: none;
+}
+@media (min-width: 768px) {
+  .agenda-cards-only {
+    display: none !important;
+  }
+  .agenda-table-only {
+    display: block !important;
+  }
+}

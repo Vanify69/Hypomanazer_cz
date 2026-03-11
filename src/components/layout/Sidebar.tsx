@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, FileText, Settings, LogOut, Users, UserPlus } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, LogOut, Users, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export interface SidebarProps {
@@ -29,15 +29,25 @@ export function Sidebar({ embedded = false, onClose, traySlot }: SidebarProps) {
 
   const content = (
     <>
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 shrink-0 rounded-lg bg-blue-600 flex items-center justify-center">
             <FileText className="w-6 h-6 text-white" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="font-semibold text-lg">HypoManager</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">Zprostředkování hypoték</p>
           </div>
+          {embedded && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+              aria-label="Zavřít menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 

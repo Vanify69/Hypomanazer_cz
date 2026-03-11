@@ -5,17 +5,42 @@ export const API_BASE = import.meta.env.DEV
 
 const getToken = (): string | null => localStorage.getItem('hypo-token');
 
+/** Po 401 odhlásíme a aplikace přesměruje na login. */
+export const AUTH_UNAUTHORIZED_EVENT = 'hypo-unauthorized';
+
+function notifyUnauthorized(): void {
+  if (typeof window === 'undefined') return;
+  clearToken();
+  window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
+}
+
 /** Chyba při síťovém požadavku – backend neběží nebo je špatná adresa. */
 const NETWORK_ERROR_MSG =
-  API_BASE
+  (API_BASE
     ? `Nelze se připojit k serveru. Spusťte backend (v adresáři server: npm run dev). API: ${API_BASE}`
-    : 'Nelze se připojit k serveru. Spusťte backend na portu 4000 (v adresáři server: npm run dev).';
+    : 'Nelze se připojit k serveru. Spusťte backend na portu 4000 (v adresáři server: npm run dev).') +
+  ' V DevTools (záložka Síť) zkontrolujte, že nemáte zapnutý režim „Offline“.';
+
+/** Zpráva když prohlížeč hlásí offline (nebo je v DevTools zapnutý režim Offline). */
+export const OFFLINE_HINT =
+  'Režim offline: zkontrolujte internetové připojení a v DevTools (záložka Síť) zkontrolujte, že nemáte zapnutý režim „Offline“. Spusťte také backend (v adresáři server: npm run dev).';
+
+const FETCH_TIMEOUT_MS = 25000;
 
 function wrapNetworkError(err: unknown): never {
-  if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message.includes('fetch')))
-    throw new Error(NETWORK_ERROR_MSG);
+  if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message.includes('fetch'))) {
+    const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+    throw new Error(offline ? OFFLINE_HINT : NETWORK_ERROR_MSG);
+  }
   if (err instanceof Error) throw err;
   throw new Error(String(err));
+}
+
+/** AbortController + timeout, aby requesty nevisely donekonečna. */
+function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(to));
 }
 
 export async function apiRequest<T>(
@@ -32,15 +57,21 @@ export async function apiRequest<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await fetchWithTimeout(`${API_BASE}${path}`, {
       ...rest,
       headers,
       ...(body !== undefined && body !== null ? { body: JSON.stringify(body) } : {}),
     });
   } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError')
+      throw new Error('Požadavek vypršel. Zkuste to znovu.');
     wrapNetworkError(e);
   }
 
+  if (res!.status === 401) {
+    notifyUnauthorized();
+    throw new Error('Session vypršela. Přihlaste se znovu.');
+  }
   if (res!.status === 204) return undefined as T;
   const data = await res!.json().catch(() => ({}));
   if (!res!.ok) throw new Error(data?.error ?? `Chyba ${res!.status}`);

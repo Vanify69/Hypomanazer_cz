@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiRequest, setToken as saveToken, clearToken, hasToken } from '../lib/api';
+import { apiRequest, setToken as saveToken, clearToken, hasToken, AUTH_UNAUTHORIZED_EVENT } from '../lib/api';
 
 interface User {
   id: string;
@@ -45,6 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setToken(null);
+    };
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await apiRequest<{ user: User; token: string }>('/api/auth/login', {

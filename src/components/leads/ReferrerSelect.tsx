@@ -15,6 +15,12 @@ export function ReferrerSelect({ value, onChange, disabled, placeholder = 'Hleda
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (value) setQuery(value.displayName);
@@ -31,12 +37,18 @@ export function ReferrerSelect({ value, onChange, disabled, placeholder = 'Hleda
       setLoading(true);
       getReferrers({ q: query })
         .then((list) => {
-          setResults(list);
-          setOpen(true);
+          if (mountedRef.current) {
+            setResults(list);
+            setOpen(true);
+          }
         })
-        .catch(() => setResults([]))
+        .catch(() => {
+          if (mountedRef.current) setResults([]);
+        })
         .finally(() => {
-          setLoading(false);
+          if (mountedRef.current) {
+            setLoading(false);
+          }
           debounceRef.current = null;
         });
     }, 300);

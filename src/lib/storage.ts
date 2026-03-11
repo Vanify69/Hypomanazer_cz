@@ -90,10 +90,20 @@ export async function patchCaseStatus(caseId: string, dealStatus: string): Promi
   return migrateCase(updated);
 }
 
+/** Vrátí aktivní případ. Při chybě API odmítne promise (volající použije backoff). Při neplatných datech vrací null. */
 export async function getActiveCase(): Promise<Case | null> {
-  const data = await apiRequest<{ case: Case | null }>('/api/cases/active/current');
-  const c = data.case ?? null;
-  return c ? migrateCase(c) : null;
+  try {
+    const data = await apiRequest<{ case: Case | null }>('/api/cases/active/current');
+    const c = data?.case ?? null;
+    if (!c) return null;
+    try {
+      return migrateCase(c);
+    } catch {
+      return null;
+    }
+  } catch {
+    throw new Error('active-case-unavailable');
+  }
 }
 
 export async function uploadCaseFile(

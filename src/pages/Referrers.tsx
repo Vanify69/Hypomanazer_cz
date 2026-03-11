@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Plus, Copy, Send, Pencil } from 'lucide-react';
 import { getReferrers, sendReferrerLink, regenerateReferrerLink, type Referrer } from '../lib/api';
@@ -29,19 +29,41 @@ function displayContact(r: Referrer) {
 export function Referrers() {
   const [referrers, setReferrers] = useState<Referrer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [q, setQ] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [copyId, setCopyId] = useState<string | null>(null);
+  const mountedRef = React.useRef(true);
 
   const load = () => {
     setLoading(true);
+    setLoadError(false);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
     getReferrers({ q: q || undefined, type: typeFilter || undefined })
-      .then(setReferrers)
-      .catch(() => setReferrers([]))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!mountedRef.current) return;
+        setReferrers(Array.isArray(data) ? data : []);
+        setLoadError(false);
+      })
+      .catch(() => {
+        if (!mountedRef.current) return;
+        setLoadError(true);
+        setReferrers((prev) => prev.length ? prev : []);
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoading(false);
+      });
   };
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   useEffect(() => {
     load();
   }, [typeFilter]);
@@ -125,12 +147,26 @@ export function Referrers() {
           </select>
         </div>
 
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-amber-800 dark:text-amber-200 text-sm">
+              Nepodařilo se načíst data. Zkontrolujte připojení a že běží backend. V DevTools (záložka Síť) vypněte režim „Offline“.
+            </p>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">Načítání tipařů…</div>
         ) : (
           <>
-            {/* Mobilní/tablet: karty */}
-            <div className="md:hidden space-y-3">
+            {/* Mobilní/tablet: karty (skryté od 768px) */}
+            <div className="agenda-cards-only space-y-3">
               {referrers.map((r) => (
                 <div
                   key={r.id}
@@ -184,8 +220,8 @@ export function Referrers() {
               )}
             </div>
 
-            {/* Desktop: tabulka */}
-            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Desktop: tabulka (zobrazit od 768px) */}
+            <div className="agenda-table-only bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Plus, Search } from 'lucide-react';
 import { CaseCard } from '../components/cases/CaseCard';
@@ -9,13 +9,42 @@ export function Dashboard() {
   const [cases, setCases] = useState<Case[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const mountedRef = React.useRef(true);
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+    getCases()
+      .then((data) => {
+        if (mountedRef.current) {
+          setCases(Array.isArray(data) ? data : []);
+          setLoadError(false);
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current) {
+          setCases([]);
+          setLoadError(true);
+        }
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
-    getCases()
-      .then(setCases)
-      .catch(() => setCases([]))
-      .finally(() => setLoading(false));
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
   }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
   
   const filteredCases = cases.filter(c =>
     c.jmeno.toLowerCase().includes(searchQuery.toLowerCase())
@@ -38,6 +67,20 @@ export function Dashboard() {
           </Link>
         </div>
         
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-amber-800 dark:text-amber-200 text-sm">
+              Nepodařilo se načíst data. Zkontrolujte připojení a že běží backend. V DevTools (Síť) vypněte režim „Offline“.
+            </p>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        )}
         <div className="mb-6">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />

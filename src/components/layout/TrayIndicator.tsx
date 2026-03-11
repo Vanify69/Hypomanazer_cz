@@ -43,11 +43,11 @@ function savePosition(x: number, y: number) {
 
 const TrayContent = ({ activeCase, compact = false }: { activeCase: Case | null; compact?: boolean }) => (
   <>
-    <div className="relative shrink-0">
+    {activeCase && (
+      <Circle className="w-2 h-2 shrink-0 text-green-500 fill-green-500" aria-hidden />
+    )}
+    <div className="shrink-0">
       <FileText className={`text-gray-700 dark:text-gray-300 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
-      {activeCase && (
-        <Circle className="w-2 h-2 text-green-500 fill-green-500 absolute -top-0.5 -right-0.5" />
-      )}
     </div>
     <div className={`text-gray-900 dark:text-gray-100 min-w-0 ${compact ? 'text-xs' : 'text-sm'}`}>
       <div className="font-medium truncate">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Plus, Copy, Send, Search, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
 import { getLeads, regenerateLeadLink, sendLeadLink, createLeadIntake, deleteLead, restoreLead, deleteLeadPermanently, type Lead } from '../lib/api';
@@ -54,6 +54,7 @@ function displayName(lead: Lead) {
 export function Leads() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loanTypeFilter, setLoanTypeFilter] = useState('');
@@ -65,15 +66,36 @@ export function Leads() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [permanentDeletingId, setPermanentDeletingId] = useState<string | null>(null);
+  const mountedRef = React.useRef(true);
 
   const load = () => {
     setLoading(true);
+    setLoadError(false);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
     getLeads({ q: q || undefined, status: statusFilter || undefined, loanType: loanTypeFilter || undefined, source: sourceFilter || undefined, deleted: showTrash })
-      .then(setLeads)
-      .catch(() => setLeads([]))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!mountedRef.current) return;
+        setLeads(Array.isArray(data) ? data : []);
+        setLoadError(false);
+      })
+      .catch(() => {
+        if (!mountedRef.current) return;
+        setLoadError(true);
+        setLeads((prev) => prev.length ? prev : []);
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoading(false);
+      });
   };
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   useEffect(() => { load(); }, [statusFilter, loanTypeFilter, sourceFilter, showTrash]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -284,12 +306,26 @@ export function Leads() {
           </select>
         </div>
 
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-amber-800 dark:text-amber-200 text-sm">
+              Nepodařilo se načíst data. Zkontrolujte připojení a že běží backend. V DevTools (záložka Síť) vypněte režim „Offline“.
+            </p>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">Načítání leadů…</div>
         ) : (
           <>
-            {/* Mobilní/tablet: karty */}
-            <div className="md:hidden space-y-3">
+            {/* Mobilní/tablet: karty (skryté od 768px) */}
+            <div className="agenda-cards-only space-y-3">
               {leads.map((lead) => {
                 const hasIntake = !!lead.intakeSession;
                 const canSend = hasIntake && (lead.status === 'DRAFT' || lead.status === 'SENT') && (lead.email || lead.phone);
@@ -405,8 +441,8 @@ export function Leads() {
               )}
             </div>
 
-            {/* Desktop: tabulka */}
-            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Desktop: tabulka (zobrazit od 768px) */}
+            <div className="agenda-table-only bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">

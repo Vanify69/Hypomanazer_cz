@@ -236,11 +236,17 @@ export function CaseDetail() {
   const [vypisyReparsing, setVypisyReparsing] = useState(false);
   const [opReparsing, setOpReparsing] = useState(false);
 
+  const mountedRef = React.useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     getCase(id)
       .then((c) => {
+        if (!mountedRef.current) return;
         if (c) {
           setCaseData(c);
           setVyseUveru(c.vyseUveru?.toString() || '');
@@ -252,8 +258,12 @@ export function CaseDetail() {
           setCaseData(null);
         }
       })
-      .catch(() => setCaseData(null))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (mountedRef.current) setCaseData(null);
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoading(false);
+      });
   }, [id]);
 
   const applicants = caseData?.applicants ?? [];
@@ -299,20 +309,29 @@ export function CaseDetail() {
     setTimeout(() => {
       saveCase(payload)
         .then((updated) => {
-          setCaseData(updated);
-          setActiveApplicantId(newApplicant.id);
+          if (mountedRef.current) {
+            setCaseData(updated);
+            setActiveApplicantId(newApplicant.id);
+          }
         })
         .catch(() => {
-          alert('Nepodařilo se uložit spolužadatele na server. Zkuste to znovu nebo zavřete okno.');
+          if (mountedRef.current) {
+            alert('Nepodařilo se uložit spolužadatele na server. Zkuste to znovu nebo zavřete okno.');
+          }
         });
     }, 0);
   };
 
   const handleTabChange = async (applicantId: string) => {
+    const prevApplicantId = activeApplicantId;
     setActiveApplicantId(applicantId);
     if (caseData) {
-      const updated = await saveCase({ ...caseData, activeApplicantId: applicantId });
-      setCaseData(updated);
+      try {
+        const updated = await saveCase({ ...caseData, activeApplicantId: applicantId });
+        if (mountedRef.current) setCaseData(updated);
+      } catch {
+        if (mountedRef.current) setActiveApplicantId(prevApplicantId);
+      }
     }
   };
 
