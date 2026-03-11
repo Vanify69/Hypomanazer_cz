@@ -67,8 +67,8 @@ export function Root() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Desktop/tablet sidebar – skrytý na mobilu; na tabletu s vestavěnou systémovou lištou */}
-      <div className="hidden md:block shrink-0">
+      {/* Sidebar jen na desktopu (lg 1024px+) – na mobilu i tabletu skrytý, menu v burgeru */}
+      <div className="sidebar-desktop-only shrink-0">
         <Sidebar traySlot={isTablet ? <TrayIndicator activeCase={activeCase} variant="embedded" /> : undefined} />
       </div>
 
@@ -81,8 +81,8 @@ export function Root() {
 
       {/* Hlavní oblast: mobilní hlavička + obsah */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Mobilní hlavička – jen na mobilu/tabletu do md */}
-        <header className="md:hidden shrink-0 flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 app-safe-area-padding">
+        {/* Mobilní hlavička s burgerem – zobrazit do 1024px, nad tím skrýt */}
+        <header className="sidebar-mobile-header shrink-0 flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 app-safe-area-padding">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}

@@ -324,6 +324,30 @@
   padding-right: max(1rem, env(safe-area-inset-right));
 }
 
+/* Responzivní sidebar: na mobilu/tabletu skrytý, zobrazit jen od 1024px (nezávisle na Tailwind) */
+.sidebar-desktop-only {
+  display: none;
+  width: 0;
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  .sidebar-desktop-only {
+    display: block;
+    width: auto;
+    overflow: visible;
+  }
+}
+
+/* Mobilní hlavička s burgerem: zobrazit do 1024px, nad tím skrýt */
+.sidebar-mobile-header {
+  display: flex;
+}
+@media (min-width: 1024px) {
+  .sidebar-mobile-header {
+    display: none;
+  }
+}
+
 /* Responzivita: na úzkém viewportu jeden sloupec */
 @media (max-width: 639px) {
   .app-applicant-grid {
