@@ -35,7 +35,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 app-safe-area-padding">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">HypoManažer</h1>

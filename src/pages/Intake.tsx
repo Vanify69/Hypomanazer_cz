@@ -200,7 +200,7 @@ export function Intake() {
   if (error && !data) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Neplatný nebo vypršený odkaz</h1>
           <p className="text-gray-600 mb-4">{error}</p>
           <p className="text-sm text-gray-500">Kontaktujte svého poradce pro nový odkaz na nahrání podkladů.</p>
@@ -211,7 +211,7 @@ export function Intake() {
   if (submitDone || data?.state === 'SUBMITTED' || data?.state === 'CONVERTED') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
           <h1 className="text-xl font-semibold text-green-800 mb-2">Podklady byly odeslány</h1>
           <p className="text-gray-600">Děkujeme. Váš poradce vás bude kontaktovat.</p>
         </div>
@@ -373,9 +373,9 @@ export function Intake() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 px-4 app-safe-area-padding">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg border border-gray-200 p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8">
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">Nahrání podkladů</h1>
           <p className="text-gray-600 mb-6">
             Nahrajte požadované dokumenty podle pokynů. Všechna pole označená * jsou povinná.

@@ -100,16 +100,16 @@ export function RefForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 px-4">
       <div className="max-w-lg mx-auto">
-        <div className="bg-white rounded-lg border border-gray-200 p-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Zadat nový lead</h1>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Zadat nový lead</h1>
           {displayName && (
-            <p className="text-gray-600 mb-6">Pro: {displayName}</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Pro: {displayName}</p>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <div className="grid grid-cols-2 gap-4">
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jméno klienta *</label>
                 <input

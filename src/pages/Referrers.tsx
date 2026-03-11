@@ -83,16 +83,16 @@ export function Referrers() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50 overflow-auto">
-      <div className="max-w-7xl mx-auto p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Tipaři</h1>
-            <p className="text-gray-600">Partneři, kteří vám přivádějí leady</p>
+    <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-6 sm:mb-8">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">Tipaři</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Partneři, kteří vám přivádějí leady</p>
           </div>
           <Link
             to="/referrers/new"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shrink-0"
           >
             <Plus className="w-5 h-5" />
             Nový tipař
@@ -126,35 +126,92 @@ export function Referrers() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Načítání tipařů…</div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">Načítání tipařů…</div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <>
+            {/* Mobilní/tablet: karty */}
+            <div className="md:hidden space-y-3">
+              {referrers.map((r) => (
+                <div
+                  key={r.id}
+                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm"
+                >
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{r.displayName}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{TYPE_LABELS[r.type] ?? r.type}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-3 truncate">{displayContact(r)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
+                    {r.leadCount ?? 0} leadů · {formatDate(r.createdAt)}
+                  </p>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Link
+                      to={`/referrers/${r.id}/edit`}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 min-h-[44px]"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Upravit
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLink(r)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px]"
+                    >
+                      {copyId === r.id ? 'Zkopírováno' : <><Copy className="w-4 h-4" /> Kopírovat odkaz</>}
+                    </button>
+                    <Link
+                      to={`/referrers/${r.id}/leads`}
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline min-h-[44px]"
+                    >
+                      Leady
+                    </Link>
+                    {(r.email || r.phone) && (
+                      <button
+                        type="button"
+                        onClick={() => handleSendLink(r)}
+                        disabled={sendingId === r.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 min-h-[44px]"
+                      >
+                        <Send className="w-4 h-4" />
+                        Poslat link
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {referrers.length === 0 && (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  Žádní tipaři. Přidejte prvního tlačítkem Nový tipař.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: tabulka */}
+            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                   <tr>
-                    <th className="px-4 py-3 font-medium text-gray-700">Název / jméno</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Typ</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Reg. číslo</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Kontakt</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Počet leadů</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Vytvořeno</th>
-                    <th className="px-4 py-3 font-medium text-gray-700 w-32">Akce</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Název / jméno</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Typ</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Reg. číslo</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Kontakt</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Počet leadů</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Vytvořeno</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 w-32">Akce</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                   {referrers.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-900">{r.displayName}</td>
-                      <td className="px-4 py-3 text-gray-600">{TYPE_LABELS[r.type] ?? r.type}</td>
-                      <td className="px-4 py-3 text-gray-600">{r.registrationNumber ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">{displayContact(r)}</td>
-                      <td className="px-4 py-3 text-gray-600">{r.leadCount ?? 0}</td>
-                      <td className="px-4 py-3 text-gray-600">{formatDate(r.createdAt)}</td>
+                    <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{r.displayName}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{TYPE_LABELS[r.type] ?? r.type}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{r.registrationNumber ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{displayContact(r)}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{r.leadCount ?? 0}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(r.createdAt)}</td>
                       <td className="px-4 py-3 flex flex-wrap gap-2 items-center">
                         <Link
                           to={`/referrers/${r.id}/edit`}
-                          className="p-2 text-gray-500 hover:bg-gray-100 rounded"
+                          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                           title="Upravit tipaře"
                         >
                           <Pencil className="w-4 h-4" />
@@ -162,14 +219,14 @@ export function Referrers() {
                         <button
                           type="button"
                           onClick={() => handleCopyLink(r)}
-                          className="p-2 text-gray-500 hover:bg-gray-100 rounded"
+                          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                           title="Regenerovat a zkopírovat tipařský odkaz"
                         >
                           {copyId === r.id ? 'Zkopírováno' : <Copy className="w-4 h-4" />}
                         </button>
                         <Link
                           to={`/referrers/${r.id}/leads`}
-                          className="text-sm text-blue-600 hover:underline"
+                          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           Leady
                         </Link>
@@ -178,7 +235,7 @@ export function Referrers() {
                             type="button"
                             onClick={() => handleSendLink(r)}
                             disabled={sendingId === r.id}
-                            className="p-2 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-50"
+                            className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
                             title="Poslat tipařský link"
                           >
                             <Send className="w-4 h-4" />
@@ -191,11 +248,12 @@ export function Referrers() {
               </table>
             </div>
             {referrers.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 Žádní tipaři. Přidejte prvního tlačítkem Nový tipař.
               </div>
             )}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>

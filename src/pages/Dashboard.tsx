@@ -23,16 +23,15 @@ export function Dashboard() {
   
   return (
     <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto">
-      <div className="max-w-7xl mx-auto p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Přehled případů</h1>
-            <p className="text-gray-600 dark:text-gray-400">Spravujte klienty a jejich hypoteční žádosti</p>
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-6 sm:mb-8">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">Přehled případů</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Spravujte klienty a jejich hypoteční žádosti</p>
           </div>
-          
           <Link
             to="/new-case"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition-colors font-medium shrink-0"
           >
             <Plus className="w-5 h-5" />
             Nový případ

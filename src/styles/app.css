@@ -315,3 +315,26 @@
 .app-form-grid-personal .app-form-value.font-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
+
+/* Safe area pro notched zařízení (mobil) */
+.app-safe-area-padding {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+/* Responzivita: na úzkém viewportu jeden sloupec */
+@media (max-width: 639px) {
+  .app-applicant-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-form-grid-personal {
+    grid-template-columns: 1fr;
+  }
+
+  .app-form-grid-personal .app-form-field.col-span-2 {
+    grid-column: span 1;
+  }
+}

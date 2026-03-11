@@ -4,8 +4,12 @@ import { Case } from '../../lib/types';
 
 const TRAY_POSITION_KEY = 'hypo-tray-indicator-position';
 
+export type TrayIndicatorVariant = 'floating' | 'embedded';
+
 interface TrayIndicatorProps {
   activeCase: Case | null;
+  /** floating = táhnutelné okno (desktop), embedded = v hlavičce/sidebaru (mobil, tablet) */
+  variant?: TrayIndicatorVariant;
 }
 
 const TRAY_WIDTH = 220;
@@ -37,7 +41,24 @@ function savePosition(x: number, y: number) {
   }
 }
 
-export function TrayIndicator({ activeCase }: TrayIndicatorProps) {
+const TrayContent = ({ activeCase, compact = false }: { activeCase: Case | null; compact?: boolean }) => (
+  <>
+    <div className="relative shrink-0">
+      <FileText className={`text-gray-700 dark:text-gray-300 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
+      {activeCase && (
+        <Circle className="w-2 h-2 text-green-500 fill-green-500 absolute -top-0.5 -right-0.5" />
+      )}
+    </div>
+    <div className={`text-gray-900 dark:text-gray-100 min-w-0 ${compact ? 'text-xs' : 'text-sm'}`}>
+      <div className="font-medium truncate">
+        {activeCase ? `Aktivní: ${activeCase.jmeno}` : 'Žádný aktivní'}
+      </div>
+      {!compact && <div className="text-xs text-gray-500 dark:text-gray-400">Systémová lišta</div>}
+    </div>
+  </>
+);
+
+export function TrayIndicator({ activeCase, variant = 'floating' }: TrayIndicatorProps) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(() => loadSavedPosition());
   const [dragging, setDragging] = useState(false);
@@ -58,7 +79,7 @@ export function TrayIndicator({ activeCase }: TrayIndicatorProps) {
   }, [position?.x, position?.y]);
 
   useEffect(() => {
-    if (!dragging) return;
+    if (variant !== 'floating' || !dragging) return;
     const handleMove = (e: MouseEvent) => {
       const { mouseX, mouseY, elX, elY } = dragStartRef.current;
       const dx = e.clientX - mouseX;
@@ -85,16 +106,27 @@ export function TrayIndicator({ activeCase }: TrayIndicatorProps) {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, [dragging]);
+  }, [variant, dragging]);
 
   useEffect(() => {
-    if (!dragging) return;
+    if (variant !== 'floating' || !dragging) return;
     const prevCursor = document.body.style.cursor;
     document.body.style.cursor = 'grabbing';
     return () => {
       document.body.style.cursor = prevCursor;
     };
-  }, [dragging]);
+  }, [variant, dragging]);
+
+  if (variant === 'embedded') {
+    return (
+      <div
+        className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 min-w-0 max-w-full"
+        title={activeCase ? `Aktivní případ: ${activeCase.jmeno}` : 'Žádný aktivní případ'}
+      >
+        <TrayContent activeCase={activeCase} compact />
+      </div>
+    );
+  }
 
   const style: React.CSSProperties = {
     ...(position ? { left: position.x, top: position.y, right: 'auto' } : { right: 16, top: 16 }),
@@ -105,22 +137,11 @@ export function TrayIndicator({ activeCase }: TrayIndicatorProps) {
     <div
       ref={boxRef}
       role="presentation"
-      className="fixed bg-white border border-gray-200 rounded-lg shadow-lg p-3 flex items-center gap-3 z-50 select-none cursor-default hover:cursor-grab"
+      className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 flex items-center gap-3 z-50 select-none cursor-default hover:cursor-grab"
       style={style}
       onMouseDown={handleMouseDown}
     >
-      <div className="relative pointer-events-none">
-        <FileText className="w-5 h-5 text-gray-700" />
-        {activeCase && (
-          <Circle className="w-2 h-2 text-green-500 fill-green-500 absolute -top-1 -right-1" />
-        )}
-      </div>
-      <div className="text-sm pointer-events-none">
-        <div className="font-medium text-gray-900">
-          {activeCase ? `Aktivní: ${activeCase.jmeno}` : 'Žádný aktivní případ'}
-        </div>
-        <div className="text-xs text-gray-500">Systémová lišta</div>
-      </div>
+      <TrayContent activeCase={activeCase} />
     </div>
   );
 }

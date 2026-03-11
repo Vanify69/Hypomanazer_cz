@@ -196,16 +196,16 @@ export function Leads() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50 overflow-auto">
-      <div className="max-w-7xl mx-auto p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Leady</h1>
-            <p className="text-gray-600">Obchodní příležitosti a odkaz pro nahrání podkladů</p>
+    <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-6 sm:mb-8">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">Leady</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Obchodní příležitosti a odkaz pro nahrání podkladů</p>
           </div>
           <Link
             to="/leads/new"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shrink-0"
           >
             <Plus className="w-5 h-5" />
             Nový lead
@@ -285,23 +285,142 @@ export function Leads() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Načítání leadů…</div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">Načítání leadů…</div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <>
+            {/* Mobilní/tablet: karty */}
+            <div className="md:hidden space-y-3">
+              {leads.map((lead) => {
+                const hasIntake = !!lead.intakeSession;
+                const canSend = hasIntake && (lead.status === 'DRAFT' || lead.status === 'SENT') && (lead.email || lead.phone);
+                const isConceptWithoutIntake = lead.status === 'DRAFT' && !hasIntake;
+                const isCopying = copyId === lead.id;
+                const isSending = sendingId === lead.id;
+                const isProcessing = processingId === lead.id;
+                return (
+                  <div
+                    key={lead.id}
+                    className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{displayName(lead)}</h3>
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shrink-0">
+                        {STATUS_LABELS[lead.status] ?? lead.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 truncate">{displayContact(lead)}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
+                      {LOAN_TYPE_LABELS[lead.loanType] ?? lead.loanType} · {SOURCE_LABELS[lead.source] ?? lead.source} · {formatDate(lead.createdAt)}
+                    </p>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <Link
+                        to={`/leads/${lead.id}/edit`}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 min-h-[44px]"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Upravit
+                      </Link>
+                      {showTrash ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleRestore(lead)}
+                            disabled={restoringId === lead.id || permanentDeletingId === lead.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50 min-h-[44px]"
+                          >
+                            <ArchiveRestore className="w-4 h-4" />
+                            {restoringId === lead.id ? 'Obnovuji…' : 'Obnovit'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePermanentDelete(lead)}
+                            disabled={restoringId === lead.id || permanentDeletingId === lead.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50 min-h-[44px]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Trvale smazat
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {isConceptWithoutIntake ? (
+                            <button
+                              type="button"
+                              onClick={() => handleProcessLead(lead)}
+                              disabled={isProcessing}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50 min-h-[44px]"
+                            >
+                              {isProcessing ? 'Generuji…' : 'Zpracovat lead'}
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyLink(lead)}
+                                disabled={lead.status === 'SUBMITTED' || lead.status === 'CONVERTED' || lead.status === 'EXPIRED'}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 min-h-[44px]"
+                              >
+                                {isCopying ? 'Zkopírováno' : <><Copy className="w-4 h-4" /> Kopírovat</>}
+                              </button>
+                              {canSend && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendLink(lead)}
+                                  disabled={isSending}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 min-h-[44px]"
+                                >
+                                  <Send className="w-4 h-4" />
+                                  Poslat
+                                </button>
+                              )}
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(lead)}
+                            disabled={deletingId === lead.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50 min-h-[44px]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Smazat
+                          </button>
+                          {lead.convertedCaseId && (
+                            <Link
+                              to={`/case/${lead.convertedCaseId}`}
+                              className="inline-flex items-center px-3 py-2 text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline min-h-[44px]"
+                            >
+                              Otevřít případ
+                            </Link>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {leads.length === 0 && (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  {showTrash ? 'Koš je prázdný.' : 'Žádné leady. Vytvořte první lead tlačítkem Nový lead.'}
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: tabulka */}
+            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
                   <tr>
-                    <th className="px-4 py-3 font-medium text-gray-700">Jméno</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Kontakt</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Typ úvěru</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Zdroj</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Stav</th>
-                    <th className="px-4 py-3 font-medium text-gray-700">Vytvořeno</th>
-                    <th className="px-4 py-3 font-medium text-gray-700 w-32">Akce</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Jméno</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Kontakt</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Typ úvěru</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Zdroj</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Stav</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Vytvořeno</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 w-32">Akce</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                   {leads.map((lead) => {
                     const hasIntake = !!lead.intakeSession;
                     const canSend = hasIntake && (lead.status === 'DRAFT' || lead.status === 'SENT') && (lead.email || lead.phone);
@@ -310,17 +429,17 @@ export function Leads() {
                     const isSending = sendingId === lead.id;
                     const isProcessing = processingId === lead.id;
                     return (
-                      <tr key={lead.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-gray-900">{displayName(lead)}</td>
-                        <td className="px-4 py-3 text-gray-600">{displayContact(lead)}</td>
-                        <td className="px-4 py-3 text-gray-600">{LOAN_TYPE_LABELS[lead.loanType] ?? lead.loanType}</td>
-                        <td className="px-4 py-3 text-gray-600">{SOURCE_LABELS[lead.source] ?? lead.source}</td>
+                      <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{displayName(lead)}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{displayContact(lead)}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{LOAN_TYPE_LABELS[lead.loanType] ?? lead.loanType}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{SOURCE_LABELS[lead.source] ?? lead.source}</td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                             {STATUS_LABELS[lead.status] ?? lead.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{formatDate(lead.createdAt)}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(lead.createdAt)}</td>
                         <td className="px-4 py-3 flex flex-wrap gap-2 items-center">
                           {showTrash ? (
                             <>
@@ -416,11 +535,12 @@ export function Leads() {
               </table>
             </div>
             {leads.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 {showTrash ? 'Koš je prázdný.' : 'Žádné leady. Vytvořte první lead tlačítkem Nový lead.'}
               </div>
             )}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>

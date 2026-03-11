@@ -604,7 +604,7 @@ export function CaseDetail() {
   return (
     <>
     <div className="flex-1 bg-gray-50 overflow-auto min-h-screen">
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
@@ -697,7 +697,7 @@ export function CaseDetail() {
               </div>
               {editingUver ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="vyseUveru" className="block text-sm font-medium text-gray-500 mb-1">Výše úvěru (Kč)</label>
                       <input
@@ -740,7 +740,7 @@ export function CaseDetail() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Výše úvěru</p>
                     <p className="text-base font-semibold text-gray-800">
@@ -791,26 +791,28 @@ export function CaseDetail() {
 
         {/* Karta 3: záložky a obsah */}
         <div className="app-card app-card-joined-bottom">
-          {/* Tabs + tlačítko Přidat spolužadatele vždy viditelné vpravo */}
-          <div className="border-b border-gray-200 bg-white flex items-stretch">
-            <nav className="flex space-x-1 px-6 flex-1" aria-label="Tabs">
-              {CONTENT_TABS.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setContentTab(id)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    contentTab === id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="w-4 h-4 flex items-center justify-center">
-                    <Icon className={`w-4 h-4 shrink-0 ${contentTab === id ? 'text-blue-600' : ''}`} />
-                  </span>
-                  {label}
-                </button>
-              ))}
+          {/* Tabs – horizontální scroll na mobilu */}
+          <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-stretch overflow-x-auto">
+            <nav className="flex space-x-1 px-4 sm:px-6 flex-1 min-w-0 overflow-x-auto" aria-label="Záložky">
+              <div className="flex gap-1 flex-nowrap py-0">
+                {CONTENT_TABS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setContentTab(id)}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 text-sm font-medium border-b-2 transition-colors shrink-0 ${
+                      contentTab === id
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                      <Icon className={`w-4 h-4 ${contentTab === id ? 'text-blue-600 dark:text-blue-400' : ''}`} />
+                    </span>
+                    <span className="whitespace-nowrap">{label}</span>
+                  </button>
+                ))}
+              </div>
             </nav>
           </div>
 
