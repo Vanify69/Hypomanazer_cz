@@ -73,7 +73,7 @@ export function Root() {
       </div>
 
       {/* Mobilní menu – Sheet zleva */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} modal>
         <SheetContent side="left" className="w-64 max-w-[85vw] p-0 gap-0">
           <Sidebar embedded onClose={() => setMobileMenuOpen(false)} />
         </SheetContent>
@@ -82,14 +82,16 @@ export function Root() {
       {/* Hlavní oblast: mobilní hlavička + obsah */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         {/* Mobilní hlavička s burgerem – zobrazit do 1024px, nad tím skrýt */}
-        <header className="sidebar-mobile-header shrink-0 flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 app-safe-area-padding">
+        <header className="sidebar-mobile-header shrink-0 flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 app-safe-area-padding relative z-10">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 -ml-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            onPointerDown={() => setMobileMenuOpen(true)}
+            className="p-3 -ml-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation cursor-pointer"
             aria-label="Otevřít menu"
+            aria-expanded={mobileMenuOpen}
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-6 h-6 pointer-events-none" />
           </button>
           <span className="font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0 truncate">HypoManager</span>
           {isMobile && (

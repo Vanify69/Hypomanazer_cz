@@ -338,13 +338,13 @@
   }
 }
 
-/* Mobilní hlavička s burgerem: zobrazit do 1024px, nad tím skrýt */
+/* Mobilní hlavička s burgerem: zobrazit do 1024px, nad tím skrýt (!important přebije Tailwind .flex) */
 .sidebar-mobile-header {
   display: flex;
 }
 @media (min-width: 1024px) {
   .sidebar-mobile-header {
-    display: none;
+    display: none !important;
   }
 }
 
