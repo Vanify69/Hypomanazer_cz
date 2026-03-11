@@ -128,17 +128,17 @@ export function Root() {
 
         {/* Hlavní oblast: mobilní hlavička + obsah (vedle menu, ne pod ním) */}
         <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-          {/* Mobilní hlavička: zavřené = logo + burger vedle loga vpravo + Tray; otevřené = jen Tray (křížek jen u loga ve sidebaru) */}
-          <header className="sidebar-mobile-header shrink-0 flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 app-safe-area-padding relative z-10">
+          {/* Mobilní hlavička: zavřené = logo + burger; na mobilu bez systémové lišty (slouží k identifikaci aktivního případu v prohlížeči), na tabletu v sidebaru */}
+          <header className="sidebar-mobile-header shrink-0 flex flex-col gap-2 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 app-safe-area-padding relative z-10">
             {!mobileMenuOpen && (
-              <>
-                <div className="flex min-w-0 items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600">
                     <FileText className="h-6 w-6 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="truncate font-semibold text-lg text-gray-900 dark:text-gray-100">HypoManager</h1>
-                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">Zprostředkování hypoték</p>
+                    <h1 className="font-semibold text-lg text-gray-900 dark:text-gray-100 break-words">HypoManager</h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 break-words">Zprostředkování hypoték</p>
                   </div>
                 </div>
                 <button
@@ -150,12 +150,6 @@ export function Root() {
                 >
                   <Menu className="h-6 w-6 pointer-events-none" />
                 </button>
-              </>
-            )}
-            <div className="flex-1 min-w-0" />
-            {isMobile && (
-              <div className="shrink-0">
-                <TrayIndicator activeCase={activeCase} variant="embedded" />
               </div>
             )}
           </header>

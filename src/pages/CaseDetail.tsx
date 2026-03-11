@@ -636,22 +636,23 @@ export function CaseDetail() {
         <div className="app-card app-card-joined-top">
           {/* Panel detail případu: hlavička + Údaje o úvěru */}
           <div className="p-6">
-            <div className="case-detail-header-row flex flex-col lg:flex-row lg:flex-wrap items-stretch lg:items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3 flex-wrap min-w-0">
-                <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{caseDisplayName || caseData.jmeno}</h1>
+            <div className="case-detail-header-row flex flex-col lg:flex-row lg:flex-wrap items-stretch lg:items-center justify-between gap-3 mb-4 min-w-0 overflow-x-hidden">
+              {/* Na mobilu vše pod sebe (flex-col), na desktopu v řádku */}
+              <div className="flex flex-col lg:flex-row lg:flex-wrap items-stretch lg:items-center gap-3 min-w-0 w-full lg:w-auto">
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 min-w-0 break-words">{caseDisplayName || caseData.jmeno}</h1>
                 {caseData.isActive && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200 rounded-full text-sm font-medium shrink-0">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200 rounded-full text-sm font-medium w-fit">
                     <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                     Aktivní případ
                   </span>
                 )}
                 <StatusBadge status={caseData.status} />
-                <label className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Stav případu:</span>
+                <label className="flex items-center gap-2 min-w-0 w-full lg:w-auto lg:shrink-0">
+                  <span className="text-sm text-gray-600 dark:text-gray-400 shrink-0">Stav případu:</span>
                   <select
                     value={caseData.dealStatus ?? 'NEW'}
                     onChange={(e) => handleDealStatusChange(e.target.value as DealStatus)}
-                    className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0 flex-1 lg:flex-none max-w-full"
                   >
                     {DEAL_STATUS_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
