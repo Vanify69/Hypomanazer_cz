@@ -636,22 +636,22 @@ export function CaseDetail() {
         <div className="app-card app-card-joined-top">
           {/* Panel detail případu: hlavička + Údaje o úvěru */}
           <div className="p-6">
-            <div className="flex flex-row flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="case-detail-header-row flex flex-col lg:flex-row lg:flex-wrap items-stretch lg:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-3 flex-wrap min-w-0">
-                <h1 className="text-2xl font-semibold text-gray-900">{caseDisplayName || caseData.jmeno}</h1>
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{caseDisplayName || caseData.jmeno}</h1>
                 {caseData.isActive && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full text-sm font-medium shrink-0">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200 rounded-full text-sm font-medium shrink-0">
                     <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                     Aktivní případ
                   </span>
                 )}
                 <StatusBadge status={caseData.status} />
                 <label className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm text-gray-600">Stav případu:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Stav případu:</span>
                   <select
                     value={caseData.dealStatus ?? 'NEW'}
                     onChange={(e) => handleDealStatusChange(e.target.value as DealStatus)}
-                    className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     {DEAL_STATUS_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -661,14 +661,14 @@ export function CaseDetail() {
                   </select>
                 </label>
               </div>
-              <div className="flex flex-wrap gap-2 items-center shrink-0">
+              <div className="case-detail-actions flex flex-col lg:flex-row flex-wrap gap-2 lg:shrink-0">
                 {!caseData.isActive && (
                   <button
                     type="button"
                     onClick={handleSetActive}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 lg:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] lg:min-h-0"
                   >
-                    <Star className="w-4 h-4" />
+                    <Star className="w-4 h-4 shrink-0" />
                     Použít pro zkratky
                   </button>
                 )}
@@ -678,19 +678,18 @@ export function CaseDetail() {
                     onClick={handleAddCoApplicant}
                     title="Přidat spolužadatele"
                     aria-label="Přidat spolužadatele"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                    style={{ backgroundColor: '#16a34a', color: '#fff', minWidth: '180px', visibility: 'visible', opacity: 1, flexShrink: 0 }}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 lg:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium min-h-[44px] lg:min-h-0"
                   >
-                    <span><UserPlus className="w-4 h-4 shrink-0" aria-hidden /></span>
+                    <UserPlus className="w-4 h-4 shrink-0" aria-hidden />
                     <span>Přidat spolužadatele</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 lg:py-2 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors min-h-[44px] lg:min-h-0"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4 shrink-0" />
                   Smazat případ
                 </button>
               </div>
@@ -701,16 +700,17 @@ export function CaseDetail() {
               className="mt-6 p-5 bg-gray-50 border border-gray-200 shadow-sm"
               style={{ borderRadius: 16 }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-gray-900">Údaje o úvěru</h3>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Údaje o úvěru</h3>
                 {!editingUver && (
                   <button
                     type="button"
                     onClick={() => setEditingUver(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-h-[44px] lg:min-h-0"
+                    aria-label="Editovat údaje o úvěru"
                   >
-                    <Pencil className="w-4 h-4" />
-                    Editovat
+                    <Pencil className="w-4 h-4 shrink-0" />
+                    <span className="hidden lg:inline">Editovat</span>
                   </button>
                 )}
               </div>

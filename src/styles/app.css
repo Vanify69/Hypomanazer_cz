@@ -378,3 +378,27 @@
     display: block !important;
   }
 }
+
+/* Detail případu / Leady / Tipaři: na velkém monitoru (≥1024px) vždy vodorovný layout – stejný breakpoint jako sidebar */
+@media (min-width: 1024px) {
+  .case-detail-header-row {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+  }
+  .case-detail-actions {
+    flex-direction: row !important;
+    flex-shrink: 0 !important;
+  }
+  .agenda-filters-row {
+    flex-direction: row !important;
+    align-items: flex-end !important;
+  }
+  .agenda-filters-row form {
+    flex-direction: row !important;
+    max-width: 28rem !important;
+  }
+  .agenda-filters-row select {
+    width: auto !important;
+  }
+}

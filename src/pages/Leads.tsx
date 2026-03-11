@@ -251,59 +251,61 @@ export function Leads() {
           </button>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-4 items-end">
-          <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-0 max-w-md">
+        <div className="agenda-filters-row mb-6 flex flex-col lg:flex-row flex-wrap gap-3 lg:gap-4 items-stretch lg:items-end">
+          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-2 flex-1 min-w-0 w-full lg:max-w-md">
             <div className="relative flex-1 min-w-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Hledat (jméno, kontakt…)"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 aria-label="Hledat"
               />
             </div>
             <button
               type="submit"
-              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px] lg:min-h-0 shrink-0"
             >
               Hledat
             </button>
           </form>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Stav"
-          >
-            <option value="">Všechny stavy</option>
-            {Object.entries(STATUS_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
-          <select
-            value={loanTypeFilter}
-            onChange={(e) => setLoanTypeFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Typ úvěru"
-          >
-            <option value="">Všechny typy</option>
-            {Object.entries(LOAN_TYPE_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Zdroj"
-          >
-            <option value="">Všechny zdroje</option>
-            {Object.entries(SOURCE_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
+          <div className="flex flex-col lg:flex-row gap-2 lg:gap-4 flex-wrap min-w-0">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full lg:w-auto min-w-0 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              aria-label="Stav"
+            >
+              <option value="">Všechny stavy</option>
+              {Object.entries(STATUS_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+            <select
+              value={loanTypeFilter}
+              onChange={(e) => setLoanTypeFilter(e.target.value)}
+              className="w-full lg:w-auto min-w-0 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              aria-label="Typ úvěru"
+            >
+              <option value="">Všechny typy</option>
+              {Object.entries(LOAN_TYPE_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="w-full lg:w-auto min-w-0 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              aria-label="Zdroj"
+            >
+              <option value="">Všechny zdroje</option>
+              {Object.entries(SOURCE_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {loadError && (

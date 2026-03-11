@@ -121,23 +121,24 @@ export function Referrers() {
           </Link>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-4 items-end">
-          <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-0 max-w-md">
+        <div className="agenda-filters-row mb-6 flex flex-col lg:flex-row flex-wrap gap-3 lg:gap-4 items-stretch lg:items-end">
+          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-2 flex-1 min-w-0 w-full lg:max-w-md">
             <input
               type="text"
               placeholder="Hledat (název, kontakt…)"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="flex-1 min-w-0 px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-w-0 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              aria-label="Hledat tipaře"
             />
-            <button type="submit" className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+            <button type="submit" className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px] lg:min-h-0 shrink-0">
               Hledat
             </button>
           </form>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full lg:w-auto min-w-0 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             aria-label="Typ tipaře"
           >
             <option value="">Všechny typy</option>
