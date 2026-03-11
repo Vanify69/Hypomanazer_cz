@@ -363,14 +363,14 @@
   }
 }
 
-/* Leady / Tipaři: karty jen do 768px, tabulka od 768px (nezávisle na Tailwind md:) */
+/* Leady / Tipaři: karty jen do 1024px, tabulka od 1024px (stejný breakpoint jako sidebar – na PC jen tabulka) */
 .agenda-cards-only {
   display: block;
 }
 .agenda-table-only {
   display: none;
 }
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .agenda-cards-only {
     display: none !important;
   }

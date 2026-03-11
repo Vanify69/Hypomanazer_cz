@@ -105,6 +105,7 @@ router.post("/", async (req: Request, res: Response) => {
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
   const expiresAt = getIntakeExpiresAt();
+  // V produkci nastavte FRONTEND_URL (viz server/.env.example), jinak budou intake odkazy na localhost.
   const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
   const intakeLink = `${baseUrl}/intake/${rawToken}`;
 
