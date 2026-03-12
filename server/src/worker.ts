@@ -27,9 +27,9 @@ import { convertLeadToCase } from "./services/convertLeadToCase.js";
 import { runExtractionsForCase } from "./services/runExtractions.js";
 import { REFERRER_VISIBLE_STATUS_LABELS } from "./lib/referrerStatus.js";
 import { LeadEventType, IntakeSessionState, ReferrerEventType } from "./lib/prisma.js";
+import { getFrontendBaseUrl } from "./lib/frontendUrl.js";
 
 const REDIS_URL = process.env.REDIS_URL ?? "";
-const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 
 
 async function withRetry<T>(fn: () => Promise<T>, attempts = 2): Promise<T> {
@@ -61,7 +61,7 @@ async function processSendIntakeLink(job: Job<SendIntakeLinkPayload>) {
     where: { id: lead.intakeSession.id },
     data: { tokenHash, expiresAt },
   });
-  const intakeLink = `${baseUrl}/intake/${rawToken}`;
+  const intakeLink = `${getFrontendBaseUrl()}/intake/${rawToken}`;
 
   const smsProvider = getSmsProvider();
   const emailProvider = getEmailProvider();
@@ -117,7 +117,7 @@ async function processSendReferrerLink(job: Job<SendReferrerLinkPayload>) {
       data: { referrerId, tokenHash, expiresAt },
     });
   }
-  const referrerLink = `${baseUrl}/ref/${rawToken}`;
+  const referrerLink = `${getFrontendBaseUrl()}/ref/${rawToken}`;
 
   const smsProvider = getSmsProvider();
   const emailProvider = getEmailProvider();

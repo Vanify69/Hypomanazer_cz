@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { generateToken, hashToken, getReferrerExpiresAt } from "../lib/tokens.js";
 import { ReferrerEventType, type ReferrerType, type PayoutMethod } from "../lib/prisma.js";
 import { isQueueAvailable, addSendReferrerLinkJob } from "../lib/queue.js";
+import { getFrontendBaseUrl } from "../lib/frontendUrl.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -101,8 +102,7 @@ router.post("/", async (req: Request, res: Response) => {
     data: { referrerId: referrer.id, type: ReferrerEventType.CREATED, payload: "{}" },
   });
 
-  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-  const referrerLink = `${baseUrl}/ref/${rawToken}`;
+  const referrerLink = `${getFrontendBaseUrl()}/ref/${rawToken}`;
 
   res.status(201).json({
     ...toReferrerResponse(referrer),
@@ -233,8 +233,7 @@ router.post("/:id/regenerate-link", async (req: Request, res: Response) => {
     });
   }
 
-  const baseUrl = process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-  const referrerLink = `${baseUrl}/ref/${rawToken}`;
+  const referrerLink = `${getFrontendBaseUrl()}/ref/${rawToken}`;
 
   res.json({ referrerLink, expiresAt: expiresAt.toISOString() });
 });
