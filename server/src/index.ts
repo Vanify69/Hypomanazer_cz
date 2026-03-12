@@ -17,6 +17,7 @@ import { refRouter } from "./routes/ref.js";
 import { browserExtensionRouter } from "./routes/browserExtension.js";
 import { ensureUploadDir } from "./lib/upload.js";
 import { publicApiLimiter } from "./lib/rateLimit.js";
+import { getFrontendBaseUrl, getFrontendBaseUrlSource } from "./lib/frontendUrl.js";
 
 const PORT = process.env.PORT ?? 4000;
 // Na Railway (a v produkci) musí server naslouchat na 0.0.0.0, jinak proxy se nedostane k aplikaci
@@ -26,6 +27,13 @@ ensureUploadDir();
 
 const hasOpenAiKey = Boolean(process.env.OPENAI_API_KEY?.trim());
 console.log(hasOpenAiKey ? "[Start] OPENAI_API_KEY je nastaven (LLM extrakce zapnuta)" : "[Start] OPENAI_API_KEY chybí – extrakce z OP jen přes regex");
+
+const frontendBase = getFrontendBaseUrl();
+const frontendSource = getFrontendBaseUrlSource();
+console.log(`[Start] Frontend base URL: ${frontendBase} (zdroj: ${frontendSource})`);
+if (process.env.NODE_ENV === "production" && (frontendBase.includes("localhost") || frontendBase.startsWith("http://127."))) {
+  console.warn("[Start] VAROVÁNÍ: V produkci používáte localhost pro odkazy. Na backend službě (Railway) nastavte FRONTEND_URL na URL vašeho frontendu, např. FRONTEND_URL=https://${{ VaseFrontendSlužba.RAILWAY_PUBLIC_DOMAIN }}");
+}
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
@@ -52,6 +60,8 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     service: "hypomanager-api",
     llmAvailable: Boolean(process.env.OPENAI_API_KEY?.trim()),
+    frontendBaseUrl: getFrontendBaseUrl(),
+    frontendUrlSource: getFrontendBaseUrlSource(),
   });
 });
 
