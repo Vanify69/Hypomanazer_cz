@@ -271,7 +271,7 @@ export function Leads() {
               Hledat
             </button>
           </form>
-          <div className="flex flex-col lg:flex-row gap-2 lg:gap-4 flex-wrap min-w-0">
+          <div className="agenda-filter-selects flex flex-col lg:flex-row gap-2 lg:gap-4 flex-wrap min-w-0">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -338,10 +338,10 @@ export function Leads() {
                 return (
                   <div
                     key={lead.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm"
+                    className="agenda-card bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm min-w-0 overflow-hidden"
                   >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{displayName(lead)}</h3>
+                    <div className="flex items-start justify-between gap-2 mb-2 min-w-0">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 min-w-0 truncate">{displayName(lead)}</h3>
                       <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shrink-0">
                         {STATUS_LABELS[lead.status] ?? lead.status}
                       </span>
@@ -350,7 +350,7 @@ export function Leads() {
                     <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
                       {LOAN_TYPE_LABELS[lead.loanType] ?? lead.loanType} · {SOURCE_LABELS[lead.source] ?? lead.source} · {formatDate(lead.createdAt)}
                     </p>
-                    <div className="flex flex-wrap gap-2 items-center">
+                    <div className="agenda-card-actions flex flex-wrap gap-2 items-center min-w-0">
                       <Link
                         to={`/leads/${lead.id}/edit`}
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 min-h-[44px]"

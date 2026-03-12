@@ -366,9 +366,17 @@
 /* Leady / Tipaři: karty jen do 1024px, tabulka od 1024px (stejný breakpoint jako sidebar – na PC jen tabulka) */
 .agenda-cards-only {
   display: block;
+  min-width: 0;
 }
 .agenda-table-only {
   display: none;
+}
+/* Karty – tlačítka na mobilu se zalamují (flex-wrap), nepřetékají */
+.agenda-card {
+  min-width: 0;
+}
+.agenda-card-actions {
+  min-width: 0;
 }
 @media (min-width: 1024px) {
   .agenda-cards-only {
@@ -379,16 +387,35 @@
   }
 }
 
-/* Detail případu / Leady / Tipaři: na velkém monitoru (≥1024px) vždy vodorovný layout – stejný breakpoint jako sidebar */
+/* Detail případu: na desktopu řádek 1 = název + odznaky vlevo, tlačítka vpravo; řádek 2 = Stav případu */
 @media (min-width: 1024px) {
   .case-detail-header-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+  .case-detail-header-row > div:first-child {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+  .case-detail-title-block {
     flex-direction: row !important;
     flex-wrap: wrap !important;
     align-items: center !important;
+    gap: 0.75rem !important;
+    flex: 0 1 auto !important;
   }
   .case-detail-actions {
     flex-direction: row !important;
     flex-shrink: 0 !important;
+    margin-left: auto !important;
+  }
+  .case-detail-stav-row select {
+    width: auto !important;
+    min-width: 10rem !important;
+    max-width: 22ch !important;
   }
   .agenda-filters-row {
     flex-direction: row !important;
@@ -397,6 +424,11 @@
   .agenda-filters-row form {
     flex-direction: row !important;
     max-width: 28rem !important;
+  }
+  /* Kontejner se selecty (Stav, Typ, Zdroj) – v řádku vedle sebe */
+  .agenda-filters-row .agenda-filter-selects {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
   }
   .agenda-filters-row select {
     width: auto !important;
