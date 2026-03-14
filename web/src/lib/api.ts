@@ -2,11 +2,11 @@ const TOKEN_KEY = 'hypo-token';
 
 const API_BASE = import.meta.env.DEV
   ? ''
-  : 'https://hypomanazercz-production.up.railway.app';
+  : (import.meta.env.VITE_API_URL || 'https://hypomanazercz-production.up.railway.app');
 
-export const APP_URL = import.meta.env.DEV
+const APP_URL = import.meta.env.DEV
   ? 'http://localhost:3000'
-  : '';
+  : (import.meta.env.VITE_APP_URL || '');
 
 interface AuthResponse {
   user: { id: string; email: string; name: string | null };
@@ -49,8 +49,10 @@ export async function register(
 }
 
 export function redirectToApp(token: string): void {
-  const url = APP_URL
-    ? `${APP_URL}?auth_token=${encodeURIComponent(token)}`
-    : `/?auth_token=${encodeURIComponent(token)}`;
-  window.location.href = url;
+  if (APP_URL) {
+    window.location.href = `${APP_URL}?auth_token=${encodeURIComponent(token)}`;
+  } else {
+    localStorage.setItem(TOKEN_KEY, token);
+    window.location.href = '/';
+  }
 }
