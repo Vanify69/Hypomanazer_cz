@@ -3,6 +3,7 @@ import { Keyboard, FolderOpen, FileSpreadsheet, Puzzle, Sun, Moon, Monitor } fro
 import { useTheme } from 'next-themes';
 import { shortcuts } from '../lib/mockData';
 import { apiRequest } from '../lib/api';
+import { GoogleCalendarCard } from '../components/settings/GoogleCalendarCard';
 
 type ThemeValue = 'light' | 'dark' | 'system';
 
@@ -127,6 +128,9 @@ export function Settings() {
               </button>
             </div>
           </div>
+
+          {/* Google Calendar integrace */}
+          <GoogleCalendarCard />
 
           {/* Klávesové zkratky */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">

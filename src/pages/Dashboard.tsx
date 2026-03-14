@@ -4,6 +4,7 @@ import { Plus, Search } from 'lucide-react';
 import { CaseCard } from '../components/cases/CaseCard';
 import { getCases } from '../lib/storage';
 import { Case } from '../lib/types';
+import { UpcomingEventsWidget } from '../components/dashboard/UpcomingEventsWidget';
 
 export function Dashboard() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -95,6 +96,11 @@ export function Dashboard() {
           </div>
         </div>
         
+        {/* Widget nadcházejících událostí */}
+        <div className="mb-6">
+          <UpcomingEventsWidget />
+        </div>
+
         {loading ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">Načítání případů…</div>
         ) : (

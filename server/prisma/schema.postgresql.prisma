@@ -135,6 +135,8 @@ model User {
   browserExtensionPairings BrowserExtensionPairing[]
   browserExtensionDevices   BrowserExtensionDevice[]
   browserExtensionMappings  BrowserExtensionMapping[]
+  calendarEvents            CalendarEvent[] @relation("CalendarEvents")
+  googleOAuthToken          GoogleOAuthToken?
 }
 
 model Lead {
@@ -162,6 +164,7 @@ model Lead {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   leadEvents        LeadEvent[]
+  calendarEvents    CalendarEvent[]
   @@unique([intakeSessionId])
 }
 
@@ -217,6 +220,7 @@ model Case {
   files           CaseFile[]
   persons         Person[]
   documents       Document[]
+  calendarEvents  CalendarEvent[]
 }
 
 model Person {
@@ -336,6 +340,45 @@ model CaseFile {
   path      String   // relativní cesta na disku (uploads/caseId/filename)
   mimeType  String?  @default("application/octet-stream")
   createdAt DateTime @default(now())
+}
+
+// --- Google OAuth tokeny ---
+model GoogleOAuthToken {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email         String
+  accessToken   String
+  refreshToken  String
+  expiresAt     DateTime
+  scopes        String   // JSON array
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// --- Kalendář / úkoly ---
+model CalendarEvent {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("CalendarEvents", fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  type            String    // meeting | task | reminder | call
+  startAt         DateTime
+  endAt           DateTime?
+  allDay          Boolean   @default(false)
+  location        String?
+  caseId          String?
+  case            Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  leadId          String?
+  lead            Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  googleEventId   String?   @unique
+  googleCalendarId String?
+  lastSyncedAt    DateTime?
+  reminderMinutes Int?
+  status          String    @default("active") // active | completed | cancelled
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // --- Integrace: rozšíření pro prohlížeč (pairing + refresh token) ---

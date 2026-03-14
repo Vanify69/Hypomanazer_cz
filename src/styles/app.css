@@ -434,3 +434,83 @@
     width: auto !important;
   }
 }
+
+/* ===================== FullCalendar ===================== */
+.calendar-wrapper .fc {
+  --fc-border-color: #e5e7eb;
+  --fc-today-bg-color: #eff6ff;
+  --fc-neutral-bg-color: #f9fafb;
+  --fc-page-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  font-size: 0.875rem;
+}
+.dark .calendar-wrapper .fc {
+  --fc-border-color: #374151;
+  --fc-today-bg-color: rgba(59,130,246,0.08);
+  --fc-neutral-bg-color: #1f2937;
+  --fc-neutral-text-color: #d1d5db;
+  color: #e5e7eb;
+}
+.calendar-wrapper .fc .fc-col-header-cell {
+  padding: 8px 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.025em;
+  color: #6b7280;
+}
+.dark .calendar-wrapper .fc .fc-col-header-cell {
+  color: #9ca3af;
+}
+.calendar-wrapper .fc .fc-daygrid-day-number {
+  padding: 4px 8px;
+  font-size: 0.8125rem;
+  color: #374151;
+}
+.dark .calendar-wrapper .fc .fc-daygrid-day-number {
+  color: #d1d5db;
+}
+.calendar-wrapper .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 9999px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.calendar-wrapper .fc .fc-event {
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  border: none;
+}
+.calendar-wrapper .fc .fc-timegrid-slot {
+  height: 2.5rem;
+}
+.calendar-wrapper .fc .fc-timegrid-slot-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+.dark .calendar-wrapper .fc .fc-timegrid-slot-label {
+  color: #9ca3af;
+}
+.calendar-wrapper .fc .fc-scrollgrid {
+  border: none;
+}
+.calendar-wrapper .fc .fc-scrollgrid td:last-of-type {
+  border-right: none;
+}
+.calendar-wrapper .fc .fc-scrollgrid tr:last-of-type td {
+  border-bottom: none;
+}
+.calendar-wrapper .fc .fc-daygrid-more-link {
+  color: #3b82f6;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.calendar-wrapper .fc .fc-highlight {
+  background: rgba(59,130,246,0.08);
+}

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, FileText, Settings, LogOut, Users, UserPlus, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, LogOut, Users, UserPlus, Calendar, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export interface SidebarProps {
@@ -24,6 +24,7 @@ export function Sidebar({ embedded = false, onClose, traySlot }: SidebarProps) {
     { path: '/', icon: LayoutDashboard, label: 'Přehled případů' },
     { path: '/leads', icon: Users, label: 'Leady' },
     { path: '/referrers', icon: UserPlus, label: 'Tipaři' },
+    { path: '/calendar', icon: Calendar, label: 'Kalendář' },
     { path: '/settings', icon: Settings, label: 'Nastavení' },
   ];
 

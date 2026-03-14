@@ -21,6 +21,7 @@ import {
   UserCircle,
   IdCard,
   FileStack,
+  Calendar,
 } from 'lucide-react';
 import { getCase, saveCase, setActiveCase, deleteCase, patchCaseStatus, uploadCaseFile, deleteCaseFile, reparseDpFromStoredOutput, parseDpFromRawText, reparseOpFromStoredOutput, reparseVypisyFromStoredOutput } from '../lib/storage';
 import { API_BASE } from '../lib/api';
@@ -31,8 +32,9 @@ import { ApplicantUploadModal } from '../components/modals/ApplicantUploadModal'
 import { AddCoApplicantModal } from '../components/modals/AddCoApplicantModal';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
 import { SimpleModal } from '../components/modals/SimpleModal';
+import { CaseCalendarTab } from '../components/cases/CaseCalendarTab';
 
-type ContentTab = 'osobni' | 'op' | 'dp' | 'vypisy' | 'podklady';
+type ContentTab = 'osobni' | 'op' | 'dp' | 'vypisy' | 'podklady' | 'kalendar';
 
 const CONTENT_TABS: { id: ContentTab; label: string; icon: typeof User }[] = [
   { id: 'osobni', label: 'Osobní údaje', icon: UserCircle },
@@ -40,6 +42,7 @@ const CONTENT_TABS: { id: ContentTab; label: string; icon: typeof User }[] = [
   { id: 'dp', label: 'Data z DP', icon: Receipt },
   { id: 'vypisy', label: 'Data z výpisů', icon: Landmark },
   { id: 'podklady', label: 'Nahrané podklady', icon: FileStack },
+  { id: 'kalendar', label: 'Kalendář', icon: Calendar },
 ];
 
 const DEAL_STATUS_OPTIONS: { value: DealStatus; label: string }[] = [
@@ -1462,6 +1465,12 @@ export function CaseDetail() {
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {contentTab === 'kalendar' && caseData && (
+            <div className="p-6">
+              <CaseCalendarTab caseId={caseData.id} caseName={caseData.jmeno} />
             </div>
           )}
 

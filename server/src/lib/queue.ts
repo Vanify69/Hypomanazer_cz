@@ -24,6 +24,7 @@ const QUEUE_NAMES = {
   CONVERT_LEAD: "convert-lead",
   EXTRACTIONS: "extractions",
   REFERRER_NOTIFY: "referrer-notify",
+  CALENDAR_REMINDER: "calendar-reminder",
 } as const;
 
 const defaultJobOptions = {
@@ -46,6 +47,7 @@ export const queues = {
   convertLead: getQueue(QUEUE_NAMES.CONVERT_LEAD),
   extractions: getQueue(QUEUE_NAMES.EXTRACTIONS),
   referrerNotify: getQueue(QUEUE_NAMES.REFERRER_NOTIFY),
+  calendarReminder: getQueue(QUEUE_NAMES.CALENDAR_REMINDER),
 };
 
 export function isQueueAvailable(): boolean {
@@ -101,6 +103,37 @@ export async function addSendReferrerStatusJob(payload: SendReferrerStatusPayloa
   if (!q) return null;
   const job = await q.add("notify", payload);
   return job.id ?? null;
+}
+
+export interface CalendarReminderPayload {
+  eventId: string;
+  userId: string;
+}
+
+export async function addCalendarReminderJob(
+  payload: CalendarReminderPayload,
+  delayMs: number,
+): Promise<string | null> {
+  const q = queues.calendarReminder;
+  if (!q) return null;
+  const jobId = `cal-remind-${payload.eventId}`;
+  // Remove any existing reminder for this event before adding new one
+  const existing = await q.getJob(jobId);
+  if (existing) {
+    try { await existing.remove(); } catch { /* may have already completed */ }
+  }
+  const job = await q.add("remind", payload, { jobId, delay: delayMs });
+  return job.id ?? null;
+}
+
+export async function removeCalendarReminderJob(eventId: string): Promise<void> {
+  const q = queues.calendarReminder;
+  if (!q) return;
+  const jobId = `cal-remind-${eventId}`;
+  const existing = await q.getJob(jobId);
+  if (existing) {
+    try { await existing.remove(); } catch { /* already completed or removed */ }
+  }
 }
 
 export function getConnectionOptionsForWorker(): { host: string; port: number; password?: string } | null {

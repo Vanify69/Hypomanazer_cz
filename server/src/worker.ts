@@ -13,6 +13,7 @@ import {
   type SendIntakeLinkPayload,
   type SendReferrerLinkPayload,
   type SendReferrerStatusPayload,
+  type CalendarReminderPayload,
   addRunExtractionsJob,
 } from "./lib/queue.js";
 import { prisma } from "./lib/prisma.js";
@@ -22,6 +23,8 @@ import {
   getEmailProvider,
   buildIntakeLinkEmailBody,
   buildReferrerLinkEmailBody,
+  buildCalendarReminderEmailBody,
+  type CalendarEmailEventData,
 } from "./lib/email.js";
 import { convertLeadToCase } from "./services/convertLeadToCase.js";
 import { runExtractionsForCase } from "./services/runExtractions.js";
@@ -173,6 +176,45 @@ async function processReferrerNotify(job: Job<SendReferrerStatusPayload>) {
   }
 }
 
+async function processCalendarReminder(job: Job<CalendarReminderPayload>) {
+  const { eventId, userId } = job.data;
+  const event = await prisma.calendarEvent.findFirst({
+    where: { id: eventId, userId },
+    include: {
+      case: { select: { jmeno: true } },
+    },
+  });
+  if (!event || event.status === "cancelled" || event.status === "completed") return;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+  if (!user?.email) return;
+
+  const emailProvider = getEmailProvider();
+  if (!emailProvider) {
+    console.warn("[Worker] Calendar reminder: emailProvider není dostupný (RESEND_API_KEY / RESEND_FROM).");
+    return;
+  }
+
+  const eventData: CalendarEmailEventData = {
+    title: event.title,
+    type: event.type,
+    startAt: event.startAt,
+    endAt: event.endAt,
+    allDay: event.allDay,
+    location: event.location,
+    description: event.description,
+    caseName: event.case?.jmeno ?? null,
+    eventUrl: `${getFrontendBaseUrl()}/calendar`,
+  };
+
+  const { subject, html } = buildCalendarReminderEmailBody(eventData);
+  await withRetry(() => emailProvider.send(user.email, subject, html));
+  console.log(`[Worker] Odesláno připomínkové upozornění pro událost ${eventId} na ${user.email}`);
+}
+
 function runWorkers() {
   const connection = getConnectionOptionsForWorker();
   if (!connection) {
@@ -218,6 +260,14 @@ function runWorkers() {
     QUEUE_NAMES.REFERRER_NOTIFY,
     async (job: Job<SendReferrerStatusPayload>) => {
       await processReferrerNotify(job);
+    },
+    opts
+  );
+
+  new Worker<CalendarReminderPayload>(
+    QUEUE_NAMES.CALENDAR_REMINDER,
+    async (job: Job<CalendarReminderPayload>) => {
+      await processCalendarReminder(job);
     },
     opts
   );

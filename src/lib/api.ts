@@ -374,3 +374,108 @@ export async function sendReferrerLink(id: string, channels: ('sms' | 'email')[]
     body: { channels },
   });
 }
+
+// --- Kalendář ---
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string | null;
+  type: 'meeting' | 'task' | 'reminder' | 'call';
+  startAt: string;
+  endAt?: string | null;
+  allDay: boolean;
+  location?: string | null;
+  caseId?: string | null;
+  case?: { id: string; jmeno: string } | null;
+  leadId?: string | null;
+  lead?: { id: string; firstName: string; lastName: string } | null;
+  reminderMinutes?: number | null;
+  status: 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarEventInput {
+  title: string;
+  type: 'meeting' | 'task' | 'reminder' | 'call';
+  startAt: string;
+  endAt?: string;
+  allDay?: boolean;
+  description?: string;
+  location?: string;
+  caseId?: string;
+  leadId?: string;
+  reminderMinutes?: number;
+}
+
+export async function getCalendarEvents(params: {
+  dateFrom?: string;
+  dateTo?: string;
+  type?: string;
+  caseId?: string;
+  status?: string;
+}): Promise<CalendarEvent[]> {
+  const search = new URLSearchParams();
+  if (params.dateFrom) search.set('dateFrom', params.dateFrom);
+  if (params.dateTo) search.set('dateTo', params.dateTo);
+  if (params.type) search.set('type', params.type);
+  if (params.caseId) search.set('caseId', params.caseId);
+  if (params.status) search.set('status', params.status);
+  const qs = search.toString();
+  return apiRequest<CalendarEvent[]>(`/api/calendar/events${qs ? `?${qs}` : ''}`);
+}
+
+export async function getCalendarEvent(id: string): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>(`/api/calendar/events/${id}`);
+}
+
+export async function createCalendarEvent(data: CalendarEventInput): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>('/api/calendar/events', {
+    method: 'POST',
+    body: data,
+  });
+}
+
+export async function updateCalendarEvent(id: string, data: Partial<CalendarEventInput> & { status?: string }): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>(`/api/calendar/events/${id}`, {
+    method: 'PUT',
+    body: data,
+  });
+}
+
+export async function deleteCalendarEvent(id: string): Promise<void> {
+  return apiRequest<void>(`/api/calendar/events/${id}`, { method: 'DELETE' });
+}
+
+export async function completeCalendarEvent(id: string): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>(`/api/calendar/events/${id}/complete`, { method: 'PATCH' });
+}
+
+// --- Google integrace ---
+
+export interface GoogleConnectionStatus {
+  connected: boolean;
+  email?: string;
+  scopes?: string[];
+  connectedAt?: string;
+}
+
+export async function getGoogleConnectUrl(): Promise<{ url: string }> {
+  return apiRequest<{ url: string }>('/api/integrations/google/connect');
+}
+
+export async function getGoogleStatus(): Promise<GoogleConnectionStatus> {
+  return apiRequest<GoogleConnectionStatus>('/api/integrations/google/status');
+}
+
+export async function disconnectGoogle(): Promise<void> {
+  return apiRequest<void>('/api/integrations/google/disconnect', { method: 'DELETE' });
+}
+
+export async function syncGoogleCalendar(): Promise<{ ok: boolean; pulled: number; pushed: number }> {
+  return apiRequest<{ ok: boolean; pulled: number; pushed: number }>('/api/integrations/google/calendar/sync', { method: 'POST' });
+}
+
+export async function syncGoogleCalendarEvent(eventId: string): Promise<{ ok: boolean; googleEventId: string | null }> {
+  return apiRequest<{ ok: boolean; googleEventId: string | null }>(`/api/integrations/google/calendar/sync/${eventId}`, { method: 'POST' });
+}

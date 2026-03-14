@@ -15,6 +15,8 @@ import { intakeRouter } from "./routes/intake.js";
 import { referrersRouter } from "./routes/referrers.js";
 import { refRouter } from "./routes/ref.js";
 import { browserExtensionRouter } from "./routes/browserExtension.js";
+import { calendarRouter } from "./routes/calendar.js";
+import { googleIntegrationRouter } from "./routes/google-integration.js";
 import { ensureUploadDir } from "./lib/upload.js";
 import { publicApiLimiter } from "./lib/rateLimit.js";
 import { getFrontendBaseUrl, getFrontendBaseUrlSource } from "./lib/frontendUrl.js";
@@ -46,6 +48,8 @@ app.use("/api/intake", publicApiLimiter, intakeRouter);
 app.use("/api/referrers", referrersRouter);
 app.use("/api/ref", publicApiLimiter, refRouter);
 app.use("/api/integrations/browser-extension", browserExtensionRouter);
+app.use("/api/calendar", calendarRouter);
+app.use("/api/integrations/google", googleIntegrationRouter);
 
 // Statické soubory pro nahrané dokumenty (volitelně – lze servírovat přes endpoint)
 const uploadDir = process.env.UPLOAD_DIR ?? path.join(__dirname, "..", "uploads");

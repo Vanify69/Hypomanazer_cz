@@ -14,6 +14,7 @@ import { ReferrerLeads } from './pages/ReferrerLeads';
 import { RefForm } from './pages/RefForm';
 import { RefLeads } from './pages/RefLeads';
 import { Settings } from './pages/Settings';
+import { CalendarPage } from './pages/CalendarPage';
 import { Login } from './pages/Login';
 import { Intake } from './pages/Intake';
 import { RequireAuth } from './components/RequireAuth';
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
           { path: 'referrers/new', Component: ReferrersNew },
           { path: 'referrers/:id/edit', Component: ReferrersEdit },
           { path: 'referrers/:id/leads', Component: ReferrerLeads },
+          { path: 'calendar', Component: CalendarPage },
           { path: 'settings', Component: Settings },
         ],
       },

@@ -68,3 +68,117 @@ export const noopEmailProvider: EmailProvider = {
     /* no-op */
   },
 };
+
+// --- Kalendářové šablony ---
+
+const TYPE_LABELS: Record<string, string> = {
+  meeting: "Schůzka",
+  task: "Úkol",
+  call: "Telefonát",
+  reminder: "Připomínka",
+};
+
+const TYPE_EMOJI: Record<string, string> = {
+  meeting: "📅",
+  task: "✅",
+  call: "📞",
+  reminder: "🔔",
+};
+
+function formatDateCz(d: Date, allDay: boolean): string {
+  const opts: Intl.DateTimeFormatOptions = allDay
+    ? { weekday: "short", day: "numeric", month: "long", year: "numeric" }
+    : { weekday: "short", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" };
+  return d.toLocaleDateString("cs-CZ", opts);
+}
+
+export interface CalendarEmailEventData {
+  title: string;
+  type: string;
+  startAt: Date;
+  endAt?: Date | null;
+  allDay?: boolean;
+  location?: string | null;
+  description?: string | null;
+  caseName?: string | null;
+  eventUrl?: string;
+}
+
+export function buildCalendarReminderEmailBody(event: CalendarEmailEventData): { subject: string; html: string } {
+  const emoji = TYPE_EMOJI[event.type] ?? "📅";
+  const typeLabel = TYPE_LABELS[event.type] ?? "Událost";
+  const subject = `${emoji} Připomínka: ${event.title}`;
+  const dateStr = formatDateCz(event.startAt, !!event.allDay);
+
+  const locationRow = event.location
+    ? `<tr><td style="color:#888;padding:4px 12px 4px 0;vertical-align:top;">Místo:</td><td style="padding:4px 0;">${event.location}</td></tr>`
+    : "";
+  const caseRow = event.caseName
+    ? `<tr><td style="color:#888;padding:4px 12px 4px 0;vertical-align:top;">Případ:</td><td style="padding:4px 0;">${event.caseName}</td></tr>`
+    : "";
+  const descRow = event.description
+    ? `<tr><td style="color:#888;padding:4px 12px 4px 0;vertical-align:top;">Poznámka:</td><td style="padding:4px 0;">${event.description}</td></tr>`
+    : "";
+  const endRow = event.endAt
+    ? `<tr><td style="color:#888;padding:4px 12px 4px 0;vertical-align:top;">Konec:</td><td style="padding:4px 0;">${formatDateCz(event.endAt, !!event.allDay)}</td></tr>`
+    : "";
+  const btnRow = event.eventUrl
+    ? `<p style="margin:1.5em 0;"><a href="${event.eventUrl}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;">Otevřít v kalendáři</a></p>`
+    : "";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;line-height:1.6;color:#333;max-width:560px;">
+  <p style="font-size:18px;font-weight:600;margin-bottom:4px;">${emoji} ${typeLabel}: ${event.title}</p>
+  <table style="font-size:14px;border-collapse:collapse;">
+    <tr><td style="color:#888;padding:4px 12px 4px 0;vertical-align:top;">Kdy:</td><td style="padding:4px 0;font-weight:500;">${dateStr}</td></tr>
+    ${endRow}${locationRow}${caseRow}${descRow}
+  </table>
+  ${btnRow}
+  <p style="font-size:13px;color:#888;margin-top:2em;">Tento email byl odeslán automaticky z HypoManažeru.</p>
+</body>
+</html>`.trim();
+
+  return { subject, html };
+}
+
+export function buildEventCreatedEmailBody(
+  event: CalendarEmailEventData,
+  creatorName: string,
+): { subject: string; html: string } {
+  const emoji = TYPE_EMOJI[event.type] ?? "📅";
+  const typeLabel = TYPE_LABELS[event.type] ?? "Událost";
+  const subject = `${emoji} Nová událost: ${event.title}`;
+  const dateStr = formatDateCz(event.startAt, !!event.allDay);
+
+  const locationRow = event.location
+    ? `<tr><td style="color:#888;padding:4px 12px 4px 0;">Místo:</td><td style="padding:4px 0;">${event.location}</td></tr>`
+    : "";
+  const caseRow = event.caseName
+    ? `<tr><td style="color:#888;padding:4px 12px 4px 0;">Případ:</td><td style="padding:4px 0;">${event.caseName}</td></tr>`
+    : "";
+  const btnRow = event.eventUrl
+    ? `<p style="margin:1.5em 0;"><a href="${event.eventUrl}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;">Zobrazit událost</a></p>`
+    : "";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;line-height:1.6;color:#333;max-width:560px;">
+  <p>Dobrý den,</p>
+  <p>${creatorName} vytvořil(a) novou událost:</p>
+  <p style="font-size:18px;font-weight:600;margin-bottom:4px;">${emoji} ${typeLabel}: ${event.title}</p>
+  <table style="font-size:14px;border-collapse:collapse;">
+    <tr><td style="color:#888;padding:4px 12px 4px 0;">Kdy:</td><td style="padding:4px 0;font-weight:500;">${dateStr}</td></tr>
+    ${locationRow}${caseRow}
+  </table>
+  ${btnRow}
+  <p style="font-size:13px;color:#888;margin-top:2em;">Tento email byl odeslán automaticky z HypoManažeru.</p>
+</body>
+</html>`.trim();
+
+  return { subject, html };
+}
