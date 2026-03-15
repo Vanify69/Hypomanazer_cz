@@ -3,8 +3,10 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Check, X } from 'lucide-react';
+import { getAppBaseUrl } from '../../lib/api';
 
 export function PricingSection() {
+  const appUrl = getAppBaseUrl();
   const plans = [
     {
       name: 'Starter',
@@ -117,6 +119,18 @@ export function PricingSection() {
                 </ul>
                 {plan.ctaLink.startsWith('mailto:') ? (
                   <a href={plan.ctaLink} className="block">
+                    <Button
+                      className={`w-full ${
+                        plan.popular
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'bg-gray-900 hover:bg-gray-800 text-white'
+                      }`}
+                    >
+                      {plan.cta}
+                    </Button>
+                  </a>
+                ) : appUrl ? (
+                  <a href={`${appUrl}${plan.ctaLink}`} className="block">
                     <Button
                       className={`w-full ${
                         plan.popular

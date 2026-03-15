@@ -2,9 +2,11 @@ import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { getAppBaseUrl } from '../../lib/api';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const appUrl = getAppBaseUrl();
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -48,16 +50,31 @@ export function Header() {
             </button>
           </nav>
 
-          {/* Desktop CTA */}
+          {/* Desktop CTA – v produkci odkaz na hlavní aplikaci */}
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/login" className="text-gray-600 hover:text-gray-900 transition-colors">
-              Přihlásit se
-            </Link>
-            <Link to="/register">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                Vyzkoušet zdarma
-              </Button>
-            </Link>
+            {appUrl ? (
+              <>
+                <a href={`${appUrl}/login`} className="text-gray-600 hover:text-gray-900 transition-colors">
+                  Přihlásit se
+                </a>
+                <a href={`${appUrl}/register`}>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Vyzkoušet zdarma
+                  </Button>
+                </a>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-gray-600 hover:text-gray-900 transition-colors">
+                  Přihlásit se
+                </Link>
+                <Link to="/register">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Vyzkoušet zdarma
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -91,18 +108,29 @@ export function Header() {
               >
                 FAQ
               </button>
-              <Link
-                to="/login"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Přihlásit se
-              </Link>
-              <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full">
-                  Vyzkoušet zdarma
-                </Button>
-              </Link>
+              {appUrl ? (
+                <>
+                  <a href={`${appUrl}/login`} className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                    Přihlásit se
+                  </a>
+                  <a href={`${appUrl}/register`} onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full">
+                      Vyzkoušet zdarma
+                    </Button>
+                  </a>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="text-gray-600 hover:text-gray-900 transition-colors" onClick={() => setMobileMenuOpen(false)}>
+                    Přihlásit se
+                  </Link>
+                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full">
+                      Vyzkoušet zdarma
+                    </Button>
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         )}

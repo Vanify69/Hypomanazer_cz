@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -7,14 +7,24 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Eye, EyeOff, Lock, Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { login, redirectToApp } from '../lib/api';
+import { login, redirectToApp, getAppBaseUrl } from '../lib/api';
 
 export function Login() {
+  const appUrl = getAppBaseUrl();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (appUrl) {
+      window.location.href = `${appUrl}/login`;
+      return;
+    }
+  }, [appUrl]);
+
+  if (appUrl) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

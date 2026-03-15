@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -6,10 +6,21 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Mail, ArrowLeft, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { getAppBaseUrl } from '../lib/api';
 
 export function ForgotPassword() {
+  const appUrl = getAppBaseUrl();
   const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
+
+  useEffect(() => {
+    if (appUrl) {
+      window.location.href = `${appUrl}/login`;
+      return;
+    }
+  }, [appUrl]);
+
+  if (appUrl) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,13 +75,17 @@ export function ForgotPassword() {
                 </Button>
 
                 <div className="text-center">
-                  <Link
-                    to="/login"
-                    className="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-2"
-                  >
-                    <ArrowLeft size={16} />
-                    Zpět na přihlášení
-                  </Link>
+                  {appUrl ? (
+                    <a href={`${appUrl}/login`} className="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-2">
+                      <ArrowLeft size={16} />
+                      Zpět na přihlášení
+                    </a>
+                  ) : (
+                    <Link to="/login" className="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-2">
+                      <ArrowLeft size={16} />
+                      Zpět na přihlášení
+                    </Link>
+                  )}
                 </div>
               </form>
             ) : (
@@ -86,11 +101,19 @@ export function ForgotPassword() {
                   Odkaz pro obnovení hesla jsme odeslali na adresu{' '}
                   <strong>{email}</strong>. Zkontrolujte i složku spam.
                 </p>
-                <Link to="/login">
-                  <Button variant="outline" className="w-full">
-                    Zpět na přihlášení
-                  </Button>
-                </Link>
+                {appUrl ? (
+                  <a href={`${appUrl}/login`}>
+                    <Button variant="outline" className="w-full">
+                      Zpět na přihlášení
+                    </Button>
+                  </a>
+                ) : (
+                  <Link to="/login">
+                    <Button variant="outline" className="w-full">
+                      Zpět na přihlášení
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </CardContent>
@@ -100,9 +123,15 @@ export function ForgotPassword() {
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Nemáte účet?{' '}
-              <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
-                Zaregistrujte se zdarma
-              </Link>
+              {appUrl ? (
+                <a href={`${appUrl}/register`} className="text-blue-600 hover:text-blue-700 font-semibold">
+                  Zaregistrujte se zdarma
+                </a>
+              ) : (
+                <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
+                  Zaregistrujte se zdarma
+                </Link>
+              )}
             </p>
           </div>
         )}

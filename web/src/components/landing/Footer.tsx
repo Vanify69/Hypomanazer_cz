@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Facebook, Linkedin, Mail, Phone } from 'lucide-react';
+import { getAppBaseUrl } from '../../lib/api';
 
 export function Footer() {
   const scrollToSection = (id: string) => {
@@ -48,9 +49,15 @@ export function Footer() {
               >
                 FAQ
               </button>
-              <Link to="/register" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Registrace
-              </Link>
+              {getAppBaseUrl() ? (
+                <a href={`${getAppBaseUrl()}/register`} className="text-sm text-gray-400 hover:text-white transition-colors">
+                  Registrace
+                </a>
+              ) : (
+                <Link to="/register" className="text-sm text-gray-400 hover:text-white transition-colors">
+                  Registrace
+                </Link>
+              )}
             </div>
           </div>
 

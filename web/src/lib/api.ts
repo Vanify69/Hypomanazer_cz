@@ -8,6 +8,15 @@ const APP_URL = import.meta.env.DEV
   ? 'http://localhost:3000'
   : (import.meta.env.VITE_APP_URL || '');
 
+/** URL hlavní aplikace (přihlášení/registrace). V produkci s VITE_APP_URL vždy odkazujeme sem. */
+export function getAppBaseUrl(): string {
+  let url = APP_URL || '';
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url.replace(/^\/+/, '')}`;
+  }
+  return url;
+}
+
 interface AuthResponse {
   user: { id: string; email: string; name: string | null };
   token: string;
@@ -29,7 +38,12 @@ async function authRequest(
     throw new Error(data?.error ?? `Chyba ${res.status}`);
   }
 
-  return data as AuthResponse;
+  const token = data?.token;
+  if (!token || typeof token !== 'string') {
+    throw new Error('Server nevrátil token. Zkontrolujte, že VITE_API_URL ukazuje na API backend.');
+  }
+
+  return { user: data.user, token } as AuthResponse;
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
@@ -49,8 +63,13 @@ export async function register(
 }
 
 export function redirectToApp(token: string): void {
-  if (APP_URL) {
-    window.location.href = `${APP_URL}?auth_token=${encodeURIComponent(token)}`;
+  if (!token || typeof token !== 'string') {
+    console.error('[redirectToApp] Token chybí nebo je neplatný');
+    return;
+  }
+  const url = getAppBaseUrl();
+  if (url) {
+    window.location.href = `${url}?auth_token=${encodeURIComponent(token)}`;
   } else {
     localStorage.setItem(TOKEN_KEY, token);
     window.location.href = '/';

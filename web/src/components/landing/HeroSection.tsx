@@ -2,8 +2,10 @@ import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { getAppBaseUrl } from '../../lib/api';
 
 export function HeroSection() {
+  const appUrl = getAppBaseUrl();
   const scrollToDemo = () => {
     const element = document.getElementById('demo');
     if (element) {
@@ -24,11 +26,19 @@ export function HeroSection() {
               AI vytáhne data z občanky, daňového přiznání i výpisů. Vy se soustředíte na klienty.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
-              <Link to="/register">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
-                  Vyzkoušet zdarma
-                </Button>
-              </Link>
+              {appUrl ? (
+                <a href={`${appUrl}/register`}>
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
+                    Vyzkoušet zdarma
+                  </Button>
+                </a>
+              ) : (
+                <Link to="/register">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
+                    Vyzkoušet zdarma
+                  </Button>
+                </Link>
+              )}
               <Button
                 size="lg"
                 variant="outline"

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -7,11 +7,20 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Eye, EyeOff, Lock, Shield, Clock, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { register, redirectToApp } from '../lib/api';
+import { register, redirectToApp, getAppBaseUrl } from '../lib/api';
 
 export function Register() {
   const [searchParams] = useSearchParams();
   const plan = searchParams.get('plan');
+  const appUrl = getAppBaseUrl();
+
+  useEffect(() => {
+    if (appUrl) {
+      const qs = plan ? `?plan=${encodeURIComponent(plan)}` : '';
+      window.location.href = `${appUrl}/register${qs}`;
+      return;
+    }
+  }, [appUrl, plan]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
@@ -33,6 +42,8 @@ export function Register() {
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
+
+  if (appUrl) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

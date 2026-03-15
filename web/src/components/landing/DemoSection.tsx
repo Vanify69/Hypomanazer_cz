@@ -1,8 +1,10 @@
 import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Play } from 'lucide-react';
+import { getAppBaseUrl } from '../../lib/api';
 
 export function DemoSection() {
+  const appUrl = getAppBaseUrl();
   return (
     <section id="demo" className="bg-white scroll-mt-20">
       <div className="max-w-[1200px] mx-auto px-6 py-20">
@@ -30,11 +32,19 @@ export function DemoSection() {
         </div>
 
         <div className="text-center">
-          <Link to="/register">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
-              Vyzkoušet zdarma
-            </Button>
-          </Link>
+          {appUrl ? (
+            <a href={`${appUrl}/register`}>
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
+                Vyzkoušet zdarma
+              </Button>
+            </a>
+          ) : (
+            <Link to="/register">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
+                Vyzkoušet zdarma
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </section>
