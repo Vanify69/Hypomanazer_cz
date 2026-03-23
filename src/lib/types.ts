@@ -109,12 +109,21 @@ export interface UploadedFile {
   applicantId?: string;
 }
 
+/** Kompatibilní alias pro daňová data žadatele (legacy naming). */
+export type TaxData = DpData;
+/** Kompatibilní alias pro data z výpisů žadatele (legacy naming). */
+export type BankStatementData = VypisyPrijmy;
+
 /** Žadatel v rámci případu – hlavní nebo spolužadatel (V2.9) */
 export interface Applicant {
   id: string;
   role: 'hlavni' | 'spoluzadatel';
   order: number; // 1–4
   extractedData?: ExtractedData;
+  /** Legacy kompatibilita s dokumentací UPDATE_V2_TO_CURRENT.md */
+  taxData?: TaxData;
+  /** Legacy kompatibilita s dokumentací UPDATE_V2_TO_CURRENT.md */
+  bankStatementData?: BankStatementData;
 }
 
 /** Stav obchodu v pipeline (pro tipaře a reporting). */
@@ -138,6 +147,10 @@ export interface Case {
   ucel?: string;
   /** Jedna nebo více osob (klient, partner) – zpětná kompatibilita */
   extractedData?: ExtractedData[];
+  /** Legacy kompatibilita */
+  taxData?: TaxData;
+  /** Legacy kompatibilita */
+  bankStatementData?: BankStatementData;
   /** Pole žadatelů (V2.9) – hlavní + až 3 spolužadatelé */
   applicants?: Applicant[];
   /** ID aktuálně vybraného žadatele (V2.9) */

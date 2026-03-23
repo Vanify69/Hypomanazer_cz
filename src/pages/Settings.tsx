@@ -39,6 +39,15 @@ export function Settings() {
     { value: 'system', label: 'Systémový', icon: Monitor },
   ];
 
+  const dashboardShortcuts = [
+    ...shortcuts,
+    {
+      key: 'Shift+Tab',
+      field: 'Žadatel (aktivní případ)',
+      description: 'Přepne na dalšího žadatele v aktivním případu',
+    },
+  ];
+
   return (
     <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto">
       <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -154,7 +163,7 @@ export function Settings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                  {shortcuts.map((shortcut) => (
+                  {dashboardShortcuts.map((shortcut) => (
                     <tr key={shortcut.key} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       <td className="px-6 py-4">
                         <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono text-gray-900 dark:text-gray-100">

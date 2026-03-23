@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Keyboard, FolderOpen, Save, Info } from "lucide-react";
+import { Keyboard, FolderOpen, Save, Info, FileSpreadsheet } from "lucide-react";
 import { mockZkratky } from "../data/mockData";
+import { BankCalculatorsSettingsSection } from "./bankCalculators/BankTemplateSettingsCard";
 
 export default function Nastaveni() {
   const [cestaUloziste, setCestaUloziste] = useState(
@@ -104,57 +105,20 @@ export default function Nastaveni() {
           </div>
         </div>
 
-        {/* Excelové šablony bank */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Excelové šablony bank
+        {/* Excelové kalkulačky bank (RB, UCB) – šablony per uživatel */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5" />
+            Excelové kalkulačky bank
           </h2>
 
-          <p className="text-sm text-gray-600 mb-4">
-            Automatické vyplňování kalkulaček bank (vyžaduje nainstalovaný Microsoft Excel).
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            Nahrajte si vlastní soubory .xlsm pro každou banku.
+            Data se ukládají k vašemu účtu; aplikace nepoužívá sdílené výchozí soubory.
+            Plný přepočet maker v Excelu na serveru zatím není – výsledky v případu mohou být v mock režimu.
           </p>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  Komerční banka
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  KB_kalkulacka_hypoteky_2026.xlsx
-                </p>
-              </div>
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50">
-                Změnit
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-gray-900">ČSOB</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  CSOB_hypoteka_formular_2026.xlsx
-                </p>
-              </div>
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50">
-                Změnit
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  Česká spořitelna
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  CS_hypotecni_kalkulacka.xlsx
-                </p>
-              </div>
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50">
-                Změnit
-              </button>
-            </div>
-          </div>
+          <BankCalculatorsSettingsSection />
         </div>
 
         {/* Uložit nastavení */}
