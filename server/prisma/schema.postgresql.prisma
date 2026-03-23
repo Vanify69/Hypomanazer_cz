@@ -122,6 +122,27 @@ enum DealStatus {
   LOST
 }
 
+enum BankCalculatorCode {
+  RB
+  UCB
+}
+
+enum BankTemplateMappingStatus {
+  UNKNOWN
+  VALID
+  INVALID
+  NEEDS_REVIEW
+}
+
+enum BankCalculationStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  MISSING_TEMPLATE
+  MOCK
+}
+
 model User {
   id        String     @id @default(cuid())
   email     String     @unique
@@ -137,6 +158,8 @@ model User {
   browserExtensionMappings  BrowserExtensionMapping[]
   calendarEvents            CalendarEvent[] @relation("CalendarEvents")
   googleOAuthToken          GoogleOAuthToken?
+  bankTemplates             BankTemplate[]
+  bankCalculationRuns       BankCalculationRun[]
 }
 
 model Lead {
@@ -221,6 +244,7 @@ model Case {
   persons         Person[]
   documents       Document[]
   calendarEvents  CalendarEvent[]
+  bankCalculationRuns BankCalculationRun[]
 }
 
 model Person {
@@ -340,6 +364,53 @@ model CaseFile {
   path      String   // relativní cesta na disku (uploads/caseId/filename)
   mimeType  String?  @default("application/octet-stream")
   createdAt DateTime @default(now())
+}
+
+/// Nahraná .xlsm šablona banky – vždy per uživatel (žádný globální default).
+model BankTemplate {
+  id               String                    @id @default(cuid())
+  userId           String
+  user             User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankCode         BankCalculatorCode
+  originalFileName String
+  mimeType         String
+  storageKey       String                    @unique
+  mappingStatus    BankTemplateMappingStatus @default(UNKNOWN)
+  mappingVersion   Int?
+  contentHash      String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  runs             BankCalculationRun[]
+
+  @@unique([userId, bankCode])
+}
+
+model BankCalculationRun {
+  id                      String               @id @default(cuid())
+  userId                  String
+  user                    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseId                  String
+  case                    Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  bankCode                BankCalculatorCode
+  templateId              String?
+  template                BankTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  status                  BankCalculationStatus
+  errorMessage            String?
+  generatedFileStorageKey String?
+  maxLoanAmount           Int?
+  monthlyPayment          Int?
+  dsti                    Float?
+  dti                     Float?
+  pdsti                   Float?
+  minRequiredIncome       Int?
+  passFail                String?
+  outcomeLabel            String?
+  metaJson                String?
+  startedAt               DateTime             @default(now())
+  finishedAt              DateTime?
+
+  @@index([caseId, bankCode])
+  @@index([userId, caseId])
 }
 
 // --- Google OAuth tokeny ---

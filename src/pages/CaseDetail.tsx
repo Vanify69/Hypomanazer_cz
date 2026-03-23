@@ -18,6 +18,7 @@ import {
   RotateCw,
   Receipt,
   Landmark,
+  Calculator,
   UserCircle,
   IdCard,
   FileStack,
@@ -33,8 +34,9 @@ import { AddCoApplicantModal } from '../components/modals/AddCoApplicantModal';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
 import { SimpleModal } from '../components/modals/SimpleModal';
 import { CaseCalendarTab } from '../components/cases/CaseCalendarTab';
+import { CaseBankCalculatorsPanel } from '../components/bankCalculators/CaseBankCalculatorsPanel';
 
-type ContentTab = 'osobni' | 'op' | 'dp' | 'vypisy' | 'podklady' | 'kalendar';
+type ContentTab = 'osobni' | 'op' | 'dp' | 'vypisy' | 'podklady' | 'kalendar' | 'bank-kalk';
 
 const CONTENT_TABS: { id: ContentTab; label: string; icon: typeof User }[] = [
   { id: 'osobni', label: 'Osobní údaje', icon: UserCircle },
@@ -43,6 +45,7 @@ const CONTENT_TABS: { id: ContentTab; label: string; icon: typeof User }[] = [
   { id: 'vypisy', label: 'Data z výpisů', icon: Landmark },
   { id: 'podklady', label: 'Nahrané podklady', icon: FileStack },
   { id: 'kalendar', label: 'Kalendář', icon: Calendar },
+  { id: 'bank-kalk', label: 'Bank. kalkulačky', icon: Calculator },
 ];
 
 const DEAL_STATUS_OPTIONS: { value: DealStatus; label: string }[] = [
@@ -1468,47 +1471,15 @@ export function CaseDetail() {
             </div>
           )}
 
-          {contentTab === 'kalendar' && caseData && (
+          {contentTab === 'bank-kalk' && caseData && (
             <div className="p-6">
-              <CaseCalendarTab caseId={caseData.id} caseName={caseData.jmeno} />
+              <CaseBankCalculatorsPanel caseId={caseData.id} />
             </div>
           )}
 
-          {/* Výsledky z bank */}
-          {caseData.status === 'doplneno' && (
-            <div className="p-6 border-t border-gray-100 bg-gray-50/40">
-              <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                Výsledky z bank
-              </h2>
-              
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Banka</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Měsíční splátka</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Úroková sazba</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    <tr>
-                      <td className="px-4 py-3 text-sm text-gray-900">Komerční banka</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCurrency(18450)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">5.49 %</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-3 text-sm text-gray-900">ČSOB</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCurrency(18920)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">5.69 %</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              <p className="text-xs text-gray-500 mt-3">
-                * Výsledky jsou orientační a závisí na aktuálních nabídkách bank
-              </p>
+          {contentTab === 'kalendar' && caseData && (
+            <div className="p-6">
+              <CaseCalendarTab caseId={caseData.id} caseName={caseData.jmeno} />
             </div>
           )}
         </div>

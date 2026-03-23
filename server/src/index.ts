@@ -17,6 +17,8 @@ import { refRouter } from "./routes/ref.js";
 import { browserExtensionRouter } from "./routes/browserExtension.js";
 import { calendarRouter } from "./routes/calendar.js";
 import { googleIntegrationRouter } from "./routes/google-integration.js";
+import { bankTemplatesRouter } from "./routes/bankTemplates.js";
+import { bankCalculationsRouter } from "./routes/bankCalculations.js";
 import { ensureUploadDir } from "./lib/upload.js";
 import { publicApiLimiter } from "./lib/rateLimit.js";
 import { getFrontendBaseUrl, getFrontendBaseUrlSource } from "./lib/frontendUrl.js";
@@ -50,6 +52,8 @@ app.use("/api/ref", publicApiLimiter, refRouter);
 app.use("/api/integrations/browser-extension", browserExtensionRouter);
 app.use("/api/calendar", calendarRouter);
 app.use("/api/integrations/google", googleIntegrationRouter);
+app.use("/api/bank-templates", bankTemplatesRouter);
+app.use("/api/bank-calculations", bankCalculationsRouter);
 
 // Statické soubory pro nahrané dokumenty (volitelně – lze servírovat přes endpoint)
 const uploadDir = process.env.UPLOAD_DIR ?? path.join(__dirname, "..", "uploads");

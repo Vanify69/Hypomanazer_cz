@@ -122,6 +122,27 @@ enum DealStatus {
   LOST
 }
 
+enum BankCalculatorCode {
+  RB
+  UCB
+}
+
+enum BankTemplateMappingStatus {
+  UNKNOWN
+  VALID
+  INVALID
+  NEEDS_REVIEW
+}
+
+enum BankCalculationStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  MISSING_TEMPLATE
+  MOCK
+}
+
 model User {
   id        String     @id @default(cuid())
   email     String     @unique
@@ -135,6 +156,8 @@ model User {
   browserExtensionPairings BrowserExtensionPairing[]
   browserExtensionDevices   BrowserExtensionDevice[]
   browserExtensionMappings  BrowserExtensionMapping[]
+  bankTemplates             BankTemplate[]
+  bankCalculationRuns       BankCalculationRun[]
   calendarEvents            CalendarEvent[] @relation("CalendarEvents")
   googleOAuthToken          GoogleOAuthToken?
 }
@@ -220,6 +243,7 @@ model Case {
   files           CaseFile[]
   persons         Person[]
   documents       Document[]
+  bankCalculationRuns BankCalculationRun[]
   calendarEvents  CalendarEvent[]
 }
 
@@ -342,6 +366,53 @@ model CaseFile {
   createdAt DateTime @default(now())
 }
 
+/// Nahraná .xlsm šablona banky – vždy per uživatel (žádný globální default).
+model BankTemplate {
+  id               String                    @id @default(cuid())
+  userId           String
+  user             User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankCode         BankCalculatorCode
+  originalFileName String
+  mimeType         String
+  storageKey       String                    @unique // relativní pod UPLOAD_DIR
+  mappingStatus    BankTemplateMappingStatus @default(UNKNOWN)
+  mappingVersion   Int?
+  contentHash      String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  runs             BankCalculationRun[]
+
+  @@unique([userId, bankCode])
+}
+
+model BankCalculationRun {
+  id                      String               @id @default(cuid())
+  userId                  String
+  user                    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseId                  String
+  case                    Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  bankCode                BankCalculatorCode
+  templateId              String?
+  template                BankTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  status                  BankCalculationStatus
+  errorMessage            String?
+  generatedFileStorageKey String?
+  maxLoanAmount           Int?
+  monthlyPayment          Int?
+  dsti                    Float?
+  dti                     Float?
+  pdsti                   Float?
+  minRequiredIncome       Int?
+  passFail                String?
+  outcomeLabel            String?
+  metaJson                String?
+  startedAt               DateTime             @default(now())
+  finishedAt              DateTime?
+
+  @@index([caseId, bankCode])
+  @@index([userId, caseId])
+}
+
 // --- Google OAuth tokeny ---
 model GoogleOAuthToken {
   id            String   @id @default(cuid())
@@ -358,27 +429,27 @@ model GoogleOAuthToken {
 
 // --- Kalendář / úkoly ---
 model CalendarEvent {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation("CalendarEvents", fields: [userId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  type            String    // meeting | task | reminder | call
-  startAt         DateTime
-  endAt           DateTime?
-  allDay          Boolean   @default(false)
-  location        String?
-  caseId          String?
-  case            Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  leadId          String?
-  lead            Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  googleEventId   String?   @unique
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation("CalendarEvents", fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  type             String    // meeting | task | reminder | call
+  startAt          DateTime
+  endAt            DateTime?
+  allDay           Boolean   @default(false)
+  location         String?
+  caseId           String?
+  case             Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  leadId           String?
+  lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  googleEventId    String?   @unique
   googleCalendarId String?
-  lastSyncedAt    DateTime?
-  reminderMinutes Int?
-  status          String    @default("active") // active | completed | cancelled
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  lastSyncedAt     DateTime?
+  reminderMinutes  Int?
+  status           String    @default("active") // active | completed | cancelled
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 // --- Integrace: rozšíření pro prohlížeč (pairing + refresh token) ---
