@@ -2,8 +2,7 @@ import { Outlet } from 'react-router';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { FileText, Menu } from 'lucide-react';
 import { Sidebar } from '../components/layout/Sidebar';
-import { TrayIndicator } from '../components/layout/TrayIndicator';
-import { useIsDesktop, useIsMobile } from '../components/ui/use-mobile';
+import { TopBar } from '../components/layout/TopBar';
 import { getActiveCase, saveCase } from '../lib/storage';
 import type { Case } from '../lib/types';
 
@@ -15,9 +14,6 @@ const POLL_PAUSE_AFTER_FAILURES = 5; // po N chybách přestat plánovat, obnovi
 export function Root() {
   const [activeCase, setActiveCase] = useState<Case | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
-  const isDesktop = useIsDesktop();
-  const isTablet = !isMobile && !isDesktop;
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleNextRef = useRef<(delay: number) => void>(() => {});
   const failCountRef = useRef(0);
@@ -107,7 +103,7 @@ export function Root() {
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar jen na desktopu (lg 1024px+) – na mobilu i tabletu skrytý, menu v burgeru */}
       <div className="sidebar-desktop-only shrink-0">
-        <Sidebar traySlot={isTablet ? <TrayIndicator activeCase={activeCase} variant="embedded" /> : undefined} />
+        <Sidebar activeCase={activeCase} />
       </div>
 
       {/* Na mobilu/tabletu: menu jako sloupec vlevo + obsah vpravo (bez překrývání) */}
@@ -121,7 +117,7 @@ export function Root() {
             aria-label="Menu"
           >
             <div className="flex-1 min-h-0 overflow-auto">
-              <Sidebar embedded onClose={() => setMobileMenuOpen(false)} />
+              <Sidebar embedded onClose={() => setMobileMenuOpen(false)} activeCase={activeCase} />
             </div>
           </div>
         )}
@@ -155,13 +151,11 @@ export function Root() {
           </header>
 
           <main className="flex-1 min-h-0 overflow-auto">
+            <TopBar />
             <Outlet />
           </main>
         </div>
       </div>
-
-      {/* Plovoucí systémová lišta jen na desktopu (lg+) */}
-      {isDesktop && <TrayIndicator activeCase={activeCase} variant="floating" />}
     </div>
   );
 }

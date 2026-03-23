@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { Root } from './pages/Root';
 import { Dashboard } from './pages/Dashboard';
+import { Cases } from './pages/Cases';
 import { CaseDetail } from './pages/CaseDetail';
 import { NewCase } from './pages/NewCase';
 import { Leads } from './pages/Leads';
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
         Component: Root,
         children: [
           { index: true, Component: Dashboard },
+          { path: 'cases', Component: Cases },
           { path: 'case/:id', Component: CaseDetail },
           { path: 'new-case', Component: NewCase },
           { path: 'leads', Component: Leads },

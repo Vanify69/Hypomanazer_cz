@@ -1,17 +1,18 @@
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, FileText, Settings, LogOut, Users, UserPlus, Calendar, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Settings, LogOut, Users, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import type { Case } from '../../lib/types';
 
 export interface SidebarProps {
   /** V režimu embedded se nevykresluje vnější wrapper (pro Sheet na mobilu). */
   embedded?: boolean;
   /** Zavolá se po navigaci (např. zavření Sheet po kliku na odkaz). */
   onClose?: () => void;
-  /** Volitelný obsah nad odhlášením (např. systémová lišta na tabletu). */
-  traySlot?: React.ReactNode;
+  /** Aktivní případ pro zobrazení indikátoru v sidebaru. */
+  activeCase?: Case | null;
 }
 
-export function Sidebar({ embedded = false, onClose, traySlot }: SidebarProps) {
+export function Sidebar({ embedded = false, onClose, activeCase }: SidebarProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
 
@@ -21,10 +22,9 @@ export function Sidebar({ embedded = false, onClose, traySlot }: SidebarProps) {
   };
 
   const navItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Přehled případů' },
+    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/leads', icon: Users, label: 'Leady' },
-    { path: '/referrers', icon: UserPlus, label: 'Tipaři' },
-    { path: '/calendar', icon: Calendar, label: 'Kalendář' },
+    { path: '/cases', icon: FileText, label: 'Případy' },
     { path: '/settings', icon: Settings, label: 'Nastavení' },
   ];
 
@@ -77,7 +77,16 @@ export function Sidebar({ embedded = false, onClose, traySlot }: SidebarProps) {
       </nav>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 shrink-0">
-        {traySlot && <div className="mb-3">{traySlot}</div>}
+        <div className="mb-3 flex items-center gap-2 py-1.5 px-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 min-w-0 max-w-full">
+          <div className={`w-2 h-2 rounded-full shrink-0 ${activeCase ? 'bg-green-500' : 'bg-gray-300'}`} />
+          <FileText className="w-4 h-4 text-gray-600 dark:text-gray-300 shrink-0" />
+          <div className="min-w-0">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Aktivní případ</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              {activeCase ? activeCase.jmeno : 'Žádný'}
+            </div>
+          </div>
+        </div>
         {user?.email && (
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate px-2" title={user.email}>
             {user.email}
