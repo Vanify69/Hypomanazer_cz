@@ -2,7 +2,8 @@ import type { WorkbookHandle } from "./types.js";
 
 /**
  * Abstrakce přepočtu workbooku (.xlsm + makra).
- * TODO: Implementace přes Excel COM (desktop) nebo Windows worker – viz mock níže.
+ * Plný přepočet: nastavte EXCEL_WORKER_URL na službu windows-excel-worker (COM + Excel na Windows).
+ * Bez něj se používá MockCalculationEngine – výstupy z šablony mohou číst ExcelJS (bez přepočtu vzorců).
  */
 export interface CalculationEngine {
   recalculate(handle: WorkbookHandle): Promise<void>;

@@ -1,0 +1,17 @@
+{
+  "name": "hypo-windows-excel-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Excel COM přepočet bankovních šablon (pouze Windows + nainstalovaný Microsoft Excel).",
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "winax": "^3.3.4"
+  }
+}

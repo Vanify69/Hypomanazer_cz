@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   prisma,
   BankCalculatorCode,
@@ -6,6 +7,7 @@ import {
 import { bankOutputRelativePath, writeBufferToStorageKey, readBufferFromStorageKey } from "../../lib/bankStoragePaths.js";
 import { bankAdapterRegistry } from "./registry.js";
 import { MockCalculationEngine } from "./calculationEngine.js";
+import { isComExcelWorkerConfigured, runComExcelWorker } from "./comExcelWorkerClient.js";
 import type { BankCalculationResultDTO, MortgageCaseData } from "./types.js";
 
 export async function assertCaseOwned(caseId: string, userId: string) {
@@ -126,9 +128,25 @@ export async function runCalculation(
   try {
     const fileBuffer = readBufferFromStorageKey(template.storageKey);
     const loaded = await adapter.loadTemplate({ template, fileBuffer });
-    await adapter.mapInputs(loaded, mortgageData);
-    const engine = new MockCalculationEngine();
-    await adapter.calculate(loaded, engine);
+
+    let engineLabel = "exceljs-mock";
+    if (isComExcelWorkerConfigured()) {
+      const preferredExt = path.extname(template.originalFileName || "").toLowerCase() || ".xlsm";
+      const { fileBuffer: outBuf, outputs } = await runComExcelWorker({
+        fileBuffer: loaded.handle.buffer,
+        mapping: loaded.mapping,
+        mortgageCaseData: mortgageData,
+        preferredExt,
+      });
+      loaded.handle.buffer = outBuf;
+      loaded.handle.comOutputs = outputs;
+      engineLabel = "com-worker";
+    } else {
+      await adapter.mapInputs(loaded, mortgageData);
+      const engine = new MockCalculationEngine();
+      await adapter.calculate(loaded, engine);
+    }
+
     const partial = await adapter.extractOutputs(loaded, mortgageData);
     const { buffer, fileName } = await adapter.saveGeneratedFile(loaded);
     const outKey = bankOutputRelativePath(userId, caseId, run.id, fileName.replace(/[^\w.\-]+/g, "_"));
@@ -150,7 +168,11 @@ export async function runCalculation(
         passFail: partial.passFail ?? null,
         outcomeLabel: partial.outcomeLabel ?? null,
         errorMessage: partial.errorMessage ?? null,
-        metaJson: JSON.stringify({ engine: "mock", templateVersion: template.mappingVersion }),
+        metaJson: JSON.stringify({
+          engine: engineLabel,
+          templateVersion: template.mappingVersion,
+          mappingVersion: loaded.mapping.version,
+        }),
       },
     });
     return runToDto(updated);
@@ -234,7 +256,9 @@ export async function getRunForDownload(runId: string, userId: string): Promise<
   if (!run?.generatedFileStorageKey) throw new Error("Soubor k této akci neexistuje.");
   const buffer = readBufferFromStorageKey(run.generatedFileStorageKey);
   const bank = run.bankCode === BankCalculatorCode.RB ? "RB" : "UCB";
-  const fileName = `${bank}_case_${run.caseId.slice(0, 8)}.xlsm`;
+  const ext = path.extname(run.template?.originalFileName ?? "").toLowerCase();
+  const suffix = ext === ".xlsx" || ext === ".xlsm" ? ext : ".xlsm";
+  const fileName = `${bank}_case_${run.caseId.slice(0, 8)}${suffix}`;
   return {
     buffer,
     fileName,

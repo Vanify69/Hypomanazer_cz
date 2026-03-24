@@ -19,3 +19,9 @@ export function getJwtSecret(): string {
 export function getJwtExpiresIn(): string {
   return process.env.JWT_EXPIRES_IN?.trim() || "7d";
 }
+
+/** Volitelná URL Windows Excel COM workeru (přepočet .xlsm). Viz adresář windows-excel-worker v repu. */
+export function getExcelWorkerUrl(): string | undefined {
+  const u = process.env.EXCEL_WORKER_URL?.trim();
+  return u && u.length > 0 ? u : undefined;
+}

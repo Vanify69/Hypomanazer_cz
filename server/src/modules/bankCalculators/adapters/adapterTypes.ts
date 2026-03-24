@@ -7,6 +7,7 @@ export type BankTemplateRecord = {
   id: string;
   storageKey: string;
   bankCode: BankCalculatorCode;
+  originalFileName: string;
 };
 
 export interface BankAdapter {

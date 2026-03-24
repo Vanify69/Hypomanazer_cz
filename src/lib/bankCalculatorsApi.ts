@@ -62,9 +62,25 @@ export async function uploadBankTemplate(bankCode: BankCode, file: File): Promis
   } catch (e) {
     throw new Error('Nelze se připojit k serveru.');
   }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error ?? `Chyba ${res.status}`);
-  return data as BankTemplateDto;
+  const raw = await res.text();
+  let data: { error?: string } = {};
+  try {
+    data = raw ? (JSON.parse(raw) as { error?: string }) : {};
+  } catch {
+    /* např. HTML od proxy při nedostupném API */
+  }
+  if (!res.ok) {
+    const hint =
+      res.status === 502 || res.status === 503
+        ? ' Zkontrolujte, že běží backend (např. npm run dev:all).'
+        : '';
+    throw new Error((data?.error || raw?.slice(0, 120) || `Chyba ${res.status}`) + hint);
+  }
+  try {
+    return JSON.parse(raw) as BankTemplateDto;
+  } catch {
+    throw new Error('Neplatná odpověď serveru po nahrání.');
+  }
 }
 
 export async function validateBankTemplate(bankCode: BankCode): Promise<{

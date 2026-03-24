@@ -13,9 +13,15 @@ import {
 } from "../../lib/prisma.js";
 import { bankAdapterRegistry } from "./registry.js";
 import { MockCalculationEngine } from "./calculationEngine.js";
+import { validateWorkbookStructure } from "./workbookStructureValidation.js";
 
-const ALLOWED_EXT = ".xlsm";
+const ALLOWED_EXT = new Set([".xlsm", ".xlsx"]);
 const MAX_BYTES = 25 * 1024 * 1024;
+
+function defaultMimeForExt(ext: string): string {
+  if (ext === ".xlsx") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  return "application/vnd.ms-excel.sheet.macroEnabled.12";
+}
 
 function parseBankCode(raw: string): BankCalculatorCode | null {
   const u = raw.toUpperCase();
@@ -49,9 +55,9 @@ export async function uploadTemplate(
   const orig =
     Buffer.from(file.originalname || "template.xlsm", "latin1").toString("utf8") || "template.xlsm";
   const ext = path.extname(orig).toLowerCase();
-  if (ext !== ALLOWED_EXT) throw new Error("Povolený formát je pouze .xlsm.");
+  if (!ALLOWED_EXT.has(ext)) throw new Error("Povolené formáty: .xlsm nebo .xlsx.");
 
-  const unique = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ALLOWED_EXT}`;
+  const unique = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ext}`;
   const safeBase = path.basename(orig, ext).replace(/[^\w.\-]+/g, "_").slice(0, 60) || "template";
   const storageKey = bankTemplateRelativePath(userId, bankCode, `${safeBase}-${unique}`);
 
@@ -65,7 +71,7 @@ export async function uploadTemplate(
       userId,
       bankCode,
       originalFileName: orig,
-      mimeType: file.mimetype ?? "application/vnd.ms-excel.sheet.macroEnabled.12",
+      mimeType: file.mimetype ?? defaultMimeForExt(ext),
       storageKey,
       mappingStatus: BankTemplateMappingStatus.NEEDS_REVIEW,
       contentHash,
@@ -73,7 +79,7 @@ export async function uploadTemplate(
     },
     update: {
       originalFileName: orig,
-      mimeType: file.mimetype ?? "application/vnd.ms-excel.sheet.macroEnabled.12",
+      mimeType: file.mimetype ?? defaultMimeForExt(ext),
       storageKey,
       mappingStatus: BankTemplateMappingStatus.NEEDS_REVIEW,
       contentHash,
@@ -122,16 +128,30 @@ export async function validateTemplate(userId: string, bankCodeRaw: string): Pro
   try {
     const buf = readBufferFromStorageKey(template.storageKey);
     const loaded = await adapter.loadTemplate({ template, fileBuffer: buf });
+    const structural = await validateWorkbookStructure(buf, loaded.mapping);
+    if (!structural.ok) {
+      await prisma.bankTemplate.update({
+        where: { id: template.id },
+        data: { mappingStatus: BankTemplateMappingStatus.INVALID },
+      });
+      return {
+        ok: false,
+        message: structural.errors.join(" "),
+        mappingStatus: BankTemplateMappingStatus.INVALID,
+      };
+    }
     const engine = new MockCalculationEngine();
     await adapter.mapInputs(loaded, { caseId: "validate", applicants: [{ role: "primary" }] });
     await adapter.calculate(loaded, engine);
+    const warnSuffix =
+      structural.warnings.length > 0 ? ` ${structural.warnings.join(" ")}` : "";
     await prisma.bankTemplate.update({
       where: { id: template.id },
       data: { mappingStatus: BankTemplateMappingStatus.VALID, mappingVersion: loaded.mapping.version },
     });
     return {
       ok: true,
-      message: "Šablona je načitelná (mock validace – skutečné buňky ještě ověřte).",
+      message: `Šablona je načtena. Struktura listů/buněk odpovídá mapování (v${loaded.mapping.version}).${warnSuffix}`,
       mappingStatus: BankTemplateMappingStatus.VALID,
     };
   } catch (e) {

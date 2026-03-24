@@ -1,30 +1,39 @@
+import path from "node:path";
 import { BankCalculatorCode, BankCalculationStatus } from "../../../lib/prisma.js";
 import type { BankAdapter } from "./adapterTypes.js";
 import type { CalculationEngine } from "../calculationEngine.js";
 import type { LoadedTemplate, MortgageCaseData } from "../types.js";
 import type { BankCalculationResultDTO } from "../types.js";
 import { ucbMappingConfig } from "../mappings/ucb.mapping.js";
+import { applyMappingToBuffer } from "../excelMapping.js";
+import { resolveAdapterOutputs } from "../bankAdapterOutput.js";
 
 export class UcbAdapter implements BankAdapter {
   readonly bankCode = BankCalculatorCode.UCB;
 
   async loadTemplate(ctx: {
-    template: { id: string; storageKey: string; bankCode: BankCalculatorCode };
+    template: {
+      id: string;
+      storageKey: string;
+      bankCode: BankCalculatorCode;
+      originalFileName: string;
+    };
     fileBuffer: Buffer;
   }): Promise<LoadedTemplate> {
+    const ext = path.extname(ctx.template.originalFileName || "").toLowerCase();
+    const sourceExtension = ext === ".xlsx" || ext === ".xlsm" ? ext : ".xlsm";
     return {
       bankCode: this.bankCode,
       templateId: ctx.template.id,
       storageKey: ctx.template.storageKey,
+      sourceExtension,
       handle: { buffer: Buffer.from(ctx.fileBuffer) },
       mapping: ucbMappingConfig,
     };
   }
 
   async mapInputs(loaded: LoadedTemplate, data: MortgageCaseData): Promise<void> {
-    // TODO UCB: Zapište hodnoty z `data` do buněk dle `loaded.mapping.inputs`.
-    void loaded;
-    void data;
+    loaded.handle.buffer = await applyMappingToBuffer(loaded.mapping, data, loaded.handle.buffer);
   }
 
   async calculate(loaded: LoadedTemplate, engine: CalculationEngine): Promise<void> {
@@ -35,8 +44,10 @@ export class UcbAdapter implements BankAdapter {
     loaded: LoadedTemplate,
     data: MortgageCaseData
   ): Promise<Partial<BankCalculationResultDTO>> {
-    // TODO UCB: Čtěte výstupní buňky po přepočtu.
-    void loaded;
+    return resolveAdapterOutputs(loaded, data, async () => this.mockOutputs(data));
+  }
+
+  private async mockOutputs(data: MortgageCaseData): Promise<Partial<BankCalculationResultDTO>> {
     const seed = (data.caseId + "ucb").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
     const base = (data.requestedLoanAmount ?? 3_000_000) + (seed % 120_000);
     return {
@@ -48,15 +59,14 @@ export class UcbAdapter implements BankAdapter {
       pdsti: 0.14 + (seed % 6) / 100,
       minRequiredIncome: 34_000 + (seed % 9_000),
       passFail: "UNKNOWN",
-      outcomeLabel: "Mock UCB (mapování buněk TODO)",
+      outcomeLabel: "Mock UCB – nastavte EXCEL_WORKER_URL nebo doplňte mapování a buňky v šabloně.",
     };
   }
 
   async saveGeneratedFile(loaded: LoadedTemplate): Promise<{ buffer: Buffer; fileName: string }> {
-    // TODO UCB: Export workbook po přepočtu.
     return {
       buffer: Buffer.from(loaded.handle.buffer),
-      fileName: `UCB_vypocet_${Date.now()}.xlsm`,
+      fileName: `UCB_vypocet_${Date.now()}${loaded.sourceExtension}`,
     };
   }
 }

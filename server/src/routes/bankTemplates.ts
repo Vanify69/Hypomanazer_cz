@@ -1,8 +1,4 @@
 import { Router, type Request, type Response } from "express";
-
-function userId(req: Request): string {
-  return (req as Request & { user?: { userId: string } }).user!.userId;
-}
 import multer from "multer";
 import { requireAuth } from "../middleware/auth.js";
 import {
@@ -10,6 +6,10 @@ import {
   uploadTemplate,
   validateTemplate,
 } from "../modules/bankCalculators/bankTemplateService.js";
+
+function userId(req: Request): string {
+  return (req as Request & { user?: { userId: string } }).user!.userId;
+}
 
 const router = Router();
 router.use(requireAuth);
