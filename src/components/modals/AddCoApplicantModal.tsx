@@ -106,13 +106,13 @@ export function AddCoApplicantModal({
   return (
     <SimpleModal open={open} onClose={handleClose} title="Přidat spolužadatele">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
           Vyberte jednotlivé soubory spolužadatele: OP (přední a zadní strana), daňové přiznání, výpisy z účtu.
         </p>
         {!processing ? (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Soubory s podklady
               </label>
               <div className="flex gap-2">
@@ -128,27 +128,27 @@ export function AddCoApplicantModal({
                 <button
                   type="button"
                   onClick={triggerBrowse}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <FileUp className="w-4 h-4" />
                   Vybrat soubory
                 </button>
                 {selectedFiles.length > 0 && (
-                  <span className="flex items-center text-sm text-gray-500">
+                  <span className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                     {selectedFiles.length} souborů vybráno
                   </span>
                 )}
               </div>
               {selectedFiles.length > 0 && (
-                <ul className="mt-3 space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-2">
+                <ul className="mt-3 space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2">
                   {selectedFiles.map((file, index) => (
                     <li
                       key={`${file.name}-${index}`}
-                      className="flex items-center justify-between gap-2 text-sm text-gray-700 py-1"
+                      className="flex items-center justify-between gap-2 text-sm text-gray-700 dark:text-gray-200 py-1"
                     >
                       <span className="min-w-0 truncate" title={file.name}>
                         {file.name}
-                        <span className="ml-2 text-gray-500 font-normal">
+                        <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">
                           ({getFileTypeLabel(inferFileType(file))})
                         </span>
                       </span>
@@ -163,29 +163,29 @@ export function AddCoApplicantModal({
                   ))}
                 </ul>
               )}
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 Lze vybrat více souborů najednou (OP přední/zadní, daňové přiznání, výpisy z účtu). Formáty: obrázek nebo PDF.
               </p>
             </div>
-            <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 text-sm text-blue-800">
-              <p className="font-semibold mb-1">Co se stane po nahrání?</p>
+            <div className="p-4 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-sm text-blue-800 dark:text-blue-200">
+              <p className="font-semibold mb-1 text-blue-900 dark:text-blue-100">Co se stane po nahrání?</p>
               <ul className="list-disc list-inside space-y-0.5">
                 <li>Systém automaticky vytáhne data z občanského průkazu</li>
                 <li>Data z daňového přiznání a výpisů budou zpracována</li>
                 <li>Spolužadatel bude přidán k případu</li>
               </ul>
             </div>
-            {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
+            {uploadError && <p className="text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
           </>
         ) : (
           <div className="py-6 text-center">
             <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-            <p className="font-medium text-gray-900 mb-1">Vytahujeme data z dokumentů...</p>
-            <p className="text-sm text-gray-500 mb-4">Zpracováváme dokumenty a extrahujeme údaje</p>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+            <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">Vytahujeme data z dokumentů...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Zpracováváme dokumenty a extrahujeme údaje</p>
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
               <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
-            <p className="text-sm font-medium text-gray-700">{progress}%</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{progress}%</p>
           </div>
         )}
       </div>
@@ -194,7 +194,7 @@ export function AddCoApplicantModal({
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Zrušit
           </button>

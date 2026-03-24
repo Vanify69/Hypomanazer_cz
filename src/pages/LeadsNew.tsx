@@ -167,7 +167,7 @@ export function LeadsNew() {
           >
             {sendResult && (
               <>
-                <p className="text-gray-700 mb-4">{getSendSuccessMessage(sendResult)}</p>
+                <p className="text-gray-700 dark:text-gray-200 mb-4">{getSendSuccessMessage(sendResult)}</p>
                 <button
                   type="button"
                   onClick={() => {
