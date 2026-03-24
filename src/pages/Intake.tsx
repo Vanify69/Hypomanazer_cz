@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { API_BASE } from '../lib/api';
 import { apiRequestPublic } from '../lib/api';
+import { PublicPageThemeToggle } from '../components/public/PublicPageThemeToggle';
+import { useIntakeAppearance } from '../hooks/useIntakeAppearance';
 
 interface UploadSlot {
   id: string;
@@ -32,6 +34,7 @@ const DOC_LABELS: Record<string, string> = {
 };
 
 export function Intake() {
+  const { appearance, setAppearance, themeRootClass } = useIntakeAppearance();
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<IntakeData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -190,30 +193,41 @@ export function Intake() {
     }
   };
 
+  const toggleAppearance = () => setAppearance(appearance === 'light' ? 'dark' : 'light');
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Načítání…</p>
+      <div className={themeRootClass}>
+        <PublicPageThemeToggle appearance={appearance} onToggle={toggleAppearance} />
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <p className="text-gray-500 dark:text-gray-400">Načítání…</p>
+        </div>
       </div>
     );
   }
   if (error && !data) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Neplatný nebo vypršený odkaz</h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Kontaktujte svého poradce pro nový odkaz na nahrání podkladů.</p>
+      <div className={themeRootClass}>
+        <PublicPageThemeToggle appearance={appearance} onToggle={toggleAppearance} />
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Neplatný nebo vypršený odkaz</h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Kontaktujte svého poradce pro nový odkaz na nahrání podkladů.</p>
+          </div>
         </div>
       </div>
     );
   }
   if (submitDone || data?.state === 'SUBMITTED' || data?.state === 'CONVERTED') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
-          <h1 className="text-xl font-semibold text-green-800 dark:text-green-300 mb-2">Podklady byly odeslány</h1>
-          <p className="text-gray-600 dark:text-gray-300">Děkujeme. Váš poradce vás bude kontaktovat.</p>
+      <div className={themeRootClass}>
+        <PublicPageThemeToggle appearance={appearance} onToggle={toggleAppearance} />
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
+            <h1 className="text-xl font-semibold text-green-800 dark:text-green-300 mb-2">Podklady byly odeslány</h1>
+            <p className="text-gray-600 dark:text-gray-300">Děkujeme. Váš poradce vás bude kontaktovat.</p>
+          </div>
         </div>
       </div>
     );
@@ -256,7 +270,7 @@ export function Intake() {
       className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-600"
     >
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-100">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {DOC_LABELS[slot.docType] ?? slot.docType}
           {slot.required && ' *'}
         </p>
@@ -267,7 +281,7 @@ export function Intake() {
       <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
         {slot.status === 'UPLOADED' ? (
           <>
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 text-green-700 text-sm font-medium border border-green-200">
+            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 text-sm font-medium border border-green-200 dark:border-green-800">
               <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden />
               Nahráno
             </div>
@@ -275,7 +289,7 @@ export function Intake() {
               type="button"
               onClick={() => handleClearSlot(slot.id)}
               disabled={clearingSlot === slot.id}
-              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
             >
               {clearingSlot === slot.id ? '…' : 'Změnit'}
             </button>
@@ -318,7 +332,7 @@ export function Intake() {
     return (
       <div key={sectionKey} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-600">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-100">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Výpis z účtu (6 výpisů z různých měsíců) *
           </p>
         </div>
@@ -373,38 +387,40 @@ export function Intake() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 px-4 app-safe-area-padding">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Nahrání podkladů</h1>
-          <p className="text-gray-600 mb-6">
-            Nahrajte požadované dokumenty podle pokynů. Všechna pole označená * jsou povinná.
-          </p>
+    <div className={themeRootClass}>
+      <PublicPageThemeToggle appearance={appearance} onToggle={toggleAppearance} />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 px-4 app-safe-area-padding">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Nahrání podkladů</h1>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Nahrajte požadované dokumenty podle pokynů. Všechna pole označená * jsou povinná.
+            </p>
 
-          <div className="space-y-6 mb-8">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Spolužadatel</label>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={hasCoApplicant}
-                  onChange={(e) => setHasCoApplicant(e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                <span className="text-gray-700">Mám spolužadatele</span>
-              </label>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Typ příjmu</label>
-              <select
-                value={incomeType}
-                onChange={(e) => setIncomeType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="EMPLOYED">Zaměstnanec</option>
-                <option value="SELF_EMPLOYED">OSVČ</option>
-                <option value="BOTH">Obojí</option>
-              </select>
+            <div className="space-y-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Spolužadatel</label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={hasCoApplicant}
+                    onChange={(e) => setHasCoApplicant(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                  />
+                  <span className="text-gray-700 dark:text-gray-200">Mám spolužadatele</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Typ příjmu</label>
+                <select
+                  value={incomeType}
+                  onChange={(e) => setIncomeType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="EMPLOYED">Zaměstnanec</option>
+                  <option value="SELF_EMPLOYED">OSVČ</option>
+                  <option value="BOTH">Obojí</option>
+                </select>
             </div>
             {(incomeType === 'SELF_EMPLOYED' || incomeType === 'BOTH') && (
               <div>
@@ -462,7 +478,7 @@ export function Intake() {
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-1 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Souhlasím se zpracováním osobních údajů v rozsahu nezbytném pro posouzení mé žádosti (GDPR).
@@ -476,6 +492,7 @@ export function Intake() {
               {submitting ? 'Odesílám…' : 'Odeslat podklady'}
             </button>
           </form>
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
-@custom-variant dark (&:is(.dark *));
+/* dark: jen pod .dark a ne uvnitř .intake-force-light (veřejné stránky / výchozí světlý intake) */
+@custom-variant dark (&:is(.dark *):not(:is(.intake-force-light, .intake-force-light *)));
 
 :root {
   --font-size: 16px;

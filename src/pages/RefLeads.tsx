@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { apiRequestPublic } from '../lib/api';
-import { useForceLightThemeForPublicPage } from '../hooks/useForceLightThemeForPublicPage';
 
 const LOAN_LABELS: Record<string, string> = {
   PURCHASE: 'Koupě',
@@ -33,7 +32,6 @@ interface LeadItem {
 }
 
 export function RefLeads() {
-  useForceLightThemeForPublicPage();
   const { token } = useParams<{ token: string }>();
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,14 +54,14 @@ export function RefLeads() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="intake-force-light min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-500">Načítání…</p>
       </div>
     );
   }
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="intake-force-light min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md text-center">
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Neplatný odkaz</h1>
           <p className="text-gray-600">{error}</p>
@@ -73,7 +71,7 @@ export function RefLeads() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="intake-force-light min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-lg border border-gray-200 p-8">
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">Přehled vašich leadů</h1>
