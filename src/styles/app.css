@@ -264,20 +264,22 @@
 .calendar-wrapper .fc .fc-daygrid-more-link { color: var(--primary); font-size: 0.75rem; font-weight: 500; }
 .calendar-wrapper .fc .fc-highlight { background: oklch(0.488 0.243 264.376 / 0.15); }
 
-/* Dark mode: pomocné korekce formulářů */
-.dark .border-gray-200,
-.dark .border-gray-300 {
+/* Dark mode: pomocné korekce formulářů (mimo světlý ostrov .intake-force-light) */
+.dark .border-gray-200:not(:is(.intake-force-light *)),
+.dark .border-gray-300:not(:is(.intake-force-light *)) {
   border-color: var(--border) !important;
 }
-.dark .text-gray-500 {
+.dark .text-gray-500:not(:is(.intake-force-light *)) {
   color: var(--muted-foreground) !important;
 }
-.dark input.bg-white,
-.dark input.bg-gray-50,
-.dark input[type="text"],
-.dark input[type="number"],
-.dark input[type="email"],
-.dark textarea {
+/* Neaplikovat na veřejné stránky v .intake-force-light (html může mít .dark z ThemeProvider) */
+.dark input.bg-white:not(:is(.intake-force-light *)),
+.dark input.bg-gray-50:not(:is(.intake-force-light *)),
+.dark input[type="text"]:not(:is(.intake-force-light *)),
+.dark input[type="number"]:not(:is(.intake-force-light *)),
+.dark input[type="email"]:not(:is(.intake-force-light *)),
+.dark input[type="tel"]:not(:is(.intake-force-light *)),
+.dark textarea:not(:is(.intake-force-light *)) {
   background-color: var(--input-background) !important;
   color: var(--foreground) !important;
   border-color: var(--border) !important;
