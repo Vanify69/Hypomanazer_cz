@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { hashToken } from "../lib/tokens.js";
 import { getIntakeUploadDir } from "../lib/upload.js";
 import { validateRequiredSlots } from "../lib/intakeValidation.js";
+import { normalizeIntakeIncome, syncIncomeDocumentSlots } from "../lib/intakeSlotSync.js";
 import { convertLeadToCase } from "../services/convertLeadToCase.js";
 import { runExtractionsForCase } from "../services/runExtractions.js";
 import { isQueueAvailable, addConvertLeadToCaseJob } from "../lib/queue.js";
@@ -109,76 +110,35 @@ router.post("/:token/progress", async (req: Request, res: Response) => {
     data: { status: "IN_PROGRESS" },
   });
 
-  const existingSlots = session.uploadSlots;
-  const hasApplicantIdFront = existingSlots.some((s) => s.personRole === "APPLICANT" && s.docType === "ID_FRONT");
-  const hasApplicantIdBack = existingSlots.some((s) => s.personRole === "APPLICANT" && s.docType === "ID_BACK");
-  if (!hasApplicantIdFront) {
+  const ensureIdSlot = async (personRole: "APPLICANT" | "CO_APPLICANT", docType: "ID_FRONT" | "ID_BACK") => {
     const exists = await prisma.uploadSlot.findFirst({
-      where: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "ID_FRONT" },
+      where: { intakeSessionId: session.id, personRole, docType },
     });
     if (!exists) {
       await prisma.uploadSlot.create({
-        data: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "ID_FRONT", required: true },
+        data: { intakeSessionId: session.id, personRole, docType, required: true },
       });
     }
-  }
-  if (!hasApplicantIdBack) {
-    const exists = await prisma.uploadSlot.findFirst({
-      where: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "ID_BACK" },
+  };
+
+  await ensureIdSlot("APPLICANT", "ID_FRONT");
+  await ensureIdSlot("APPLICANT", "ID_BACK");
+
+  if (!body.hasCoApplicant) {
+    await prisma.uploadSlot.deleteMany({
+      where: { intakeSessionId: session.id, personRole: "CO_APPLICANT" },
     });
-    if (!exists) {
-      await prisma.uploadSlot.create({
-        data: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "ID_BACK", required: true },
-      });
-    }
+  } else {
+    await ensureIdSlot("CO_APPLICANT", "ID_FRONT");
+    await ensureIdSlot("CO_APPLICANT", "ID_BACK");
   }
+
+  const mainIncome = normalizeIntakeIncome(body.incomeType);
+  await syncIncomeDocumentSlots(session.id, "APPLICANT", mainIncome);
 
   if (body.hasCoApplicant) {
-    const hasCoIdFront = existingSlots.some((s) => s.personRole === "CO_APPLICANT" && s.docType === "ID_FRONT");
-    const hasCoIdBack = existingSlots.some((s) => s.personRole === "CO_APPLICANT" && s.docType === "ID_BACK");
-    if (!hasCoIdFront) {
-      await prisma.uploadSlot.create({
-        data: { intakeSessionId: session.id, personRole: "CO_APPLICANT", docType: "ID_FRONT", required: true },
-      });
-    }
-    if (!hasCoIdBack) {
-      await prisma.uploadSlot.create({
-        data: { intakeSessionId: session.id, personRole: "CO_APPLICANT", docType: "ID_BACK", required: true },
-      });
-    }
-  }
-
-  const incomeType = body.incomeType === "SELF_EMPLOYED" || body.incomeType === "BOTH" ? body.incomeType : "EMPLOYED";
-  if (incomeType === "EMPLOYED") {
-    await prisma.uploadSlot.deleteMany({
-      where: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "TAX_RETURN" },
-    });
-  }
-  if (incomeType === "SELF_EMPLOYED") {
-    await prisma.uploadSlot.deleteMany({
-      where: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "BANK_STATEMENT" },
-    });
-  }
-  if (incomeType === "SELF_EMPLOYED" || incomeType === "BOTH") {
-    const hasTaxReturn = existingSlots.some((s) => s.docType === "TAX_RETURN" && s.personRole === "APPLICANT");
-    if (!hasTaxReturn) {
-      const exists = await prisma.uploadSlot.findFirst({
-        where: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "TAX_RETURN" },
-      });
-      if (!exists) {
-        await prisma.uploadSlot.create({
-          data: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "TAX_RETURN", required: true, period: new Date().getFullYear().toString() },
-        });
-      }
-    }
-  }
-  if (incomeType === "EMPLOYED" || incomeType === "BOTH") {
-    const bankCount = existingSlots.filter((s) => s.docType === "BANK_STATEMENT" && s.personRole === "APPLICANT").length;
-    for (let i = bankCount; i < 6; i++) {
-      await prisma.uploadSlot.create({
-        data: { intakeSessionId: session.id, personRole: "APPLICANT", docType: "BANK_STATEMENT", required: true },
-      });
-    }
+    const coIncome = normalizeIntakeIncome(body.coApplicantIncomeType);
+    await syncIncomeDocumentSlots(session.id, "CO_APPLICANT", coIncome);
   }
 
   await prisma.leadEvent.create({
@@ -281,42 +241,90 @@ router.post("/:token/submit", async (req: Request, res: Response) => {
     return;
   }
 
-  const body = req.body as { consent?: boolean; incomeType?: string; ico?: string; hasCoApplicant?: boolean };
+  const body = req.body as {
+    consent?: boolean;
+    incomeType?: string;
+    coApplicantIncomeType?: string;
+    ico?: string;
+    coApplicantIco?: string;
+    hasCoApplicant?: boolean;
+    coApplicantRelation?: string;
+    household?: {
+      existujiciUvery?: boolean;
+      mesicniSplatky?: number;
+      pocetVyzivanychOsob?: number;
+      dalsiZavazky?: string;
+    };
+    poznamka?: string;
+  };
   if (!body.consent) {
     res.status(400).json({ error: "Je vyžadován souhlas se zpracováním osobních údajů." });
     return;
   }
 
-  const incomeType = body.incomeType === "SELF_EMPLOYED" || body.incomeType === "BOTH" ? body.incomeType : "EMPLOYED";
-  if (incomeType === "SELF_EMPLOYED" || incomeType === "BOTH") {
-    const ico = (body.ico ?? "").trim();
-    if (!ico) {
-      res.status(400).json({ error: "U OSVČ je IČO povinné. Vyplňte IČO." });
+  const mainIncome = normalizeIntakeIncome(body.incomeType);
+  const coIncome = body.hasCoApplicant ? normalizeIntakeIncome(body.coApplicantIncomeType) : "EMPLOYED";
+  const incomeNeedsIco = (inc: ReturnType<typeof normalizeIntakeIncome>) =>
+    inc === "SELF_EMPLOYED" || inc === "BOTH" || inc === "COMPANY";
+  const needsMainIco = incomeNeedsIco(mainIncome);
+  const needsCoIco = body.hasCoApplicant && incomeNeedsIco(coIncome);
+
+  const mainIcoTrim = (body.ico ?? "").trim();
+  const coIcoTrim = (body.coApplicantIco ?? "").trim();
+
+  if (needsMainIco) {
+    if (!/^\d{8}$/.test(mainIcoTrim)) {
+      res.status(400).json({
+        error: "Vyplňte platné IČO hlavního žadatele (8 číslic).",
+      });
       return;
     }
-    if (!/^\d{8}$/.test(ico)) {
-      res.status(400).json({ error: "IČO musí mít 8 číslic." });
+  }
+  if (needsCoIco) {
+    if (!/^\d{8}$/.test(coIcoTrim)) {
+      res.status(400).json({
+        error: "Vyplňte platné IČO spolužadatele (8 číslic).",
+      });
       return;
     }
   }
 
   const slots = await prisma.uploadSlot.findMany({ where: { intakeSessionId: session.id } });
-  const err = validateRequiredSlots(slots, { incomeType, hasCoApplicant: body.hasCoApplicant });
+  const err = validateRequiredSlots(slots, {
+    incomeType: mainIncome,
+    coApplicantIncomeType: body.hasCoApplicant ? coIncome : undefined,
+    hasCoApplicant: body.hasCoApplicant,
+  });
   if (err) {
     res.status(400).json({ error: err });
     return;
   }
 
+  const intakeMetadata =
+    body.household !== undefined ||
+    body.coApplicantRelation !== undefined ||
+    body.poznamka !== undefined
+      ? JSON.stringify({
+          coApplicantRelation: body.coApplicantRelation ?? null,
+          household: body.household ?? null,
+          poznamka: body.poznamka ?? null,
+        })
+      : undefined;
+
   const now = new Date();
+  const mainIcoValid = needsMainIco && /^\d{8}$/.test(mainIcoTrim) ? mainIcoTrim : undefined;
+  const coIcoValid = needsCoIco && /^\d{8}$/.test(coIcoTrim) ? coIcoTrim : undefined;
   await prisma.intakeSession.update({
     where: { id: session.id },
-    data: { submittedAt: now, consentAt: now, consentVersion: "v1", state: IntakeSessionState.SUBMITTED },
-  });
-  const icoTrimmed = (body.ico ?? "").trim();
-  const icoValid = /^\d{8}$/.test(icoTrimmed) ? icoTrimmed : null;
-  await prisma.intakeSession.update({
-    where: { id: session.id },
-    data: icoValid ? { ico: icoValid } : {},
+    data: {
+      submittedAt: now,
+      consentAt: now,
+      consentVersion: "v1",
+      state: IntakeSessionState.SUBMITTED,
+      ...(intakeMetadata !== undefined ? { intakeMetadata } : {}),
+      ...(mainIcoValid !== undefined ? { ico: mainIcoValid } : {}),
+      ...(coIcoValid !== undefined ? { coApplicantIco: coIcoValid } : {}),
+    },
   });
   await prisma.lead.update({
     where: { id: session.leadId },

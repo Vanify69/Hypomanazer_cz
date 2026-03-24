@@ -105,4 +105,44 @@ describe("validateRequiredSlots", () => {
     ];
     assert.strictEqual(validateRequiredSlots(slots, { incomeType: "EMPLOYED" }), null);
   });
+
+  it("returns error when COMPANY main applicant missing TAX_RETURN", () => {
+    const slots: SlotLike[] = [
+      slot({ docType: "ID_FRONT", required: true, status: "UPLOADED" }),
+      slot({ docType: "ID_BACK", required: true, status: "UPLOADED" }),
+      slot({ docType: "TAX_RETURN", required: true, status: "EMPTY" }),
+    ];
+    const err = validateRequiredSlots(slots, { incomeType: "COMPANY" });
+    assert.ok(err?.includes("daňové přiznání"));
+  });
+
+  it("returns null when COMPANY and TAX uploaded", () => {
+    const slots: SlotLike[] = [
+      slot({ docType: "ID_FRONT", required: true, status: "UPLOADED" }),
+      slot({ docType: "ID_BACK", required: true, status: "UPLOADED" }),
+      slot({ docType: "TAX_RETURN", required: true, status: "UPLOADED" }),
+    ];
+    assert.strictEqual(validateRequiredSlots(slots, { incomeType: "COMPANY" }), null);
+  });
+
+  it("returns error when co-applicant EMPLOYED has fewer than 6 bank uploads", () => {
+    const slots: SlotLike[] = [
+      slot({ personRole: "APPLICANT", docType: "ID_FRONT", required: true, status: "UPLOADED" }),
+      slot({ personRole: "APPLICANT", docType: "ID_BACK", required: true, status: "UPLOADED" }),
+      ...Array.from({ length: 6 }, () =>
+        slot({ personRole: "APPLICANT", docType: "BANK_STATEMENT", required: true, status: "UPLOADED" })
+      ),
+      slot({ personRole: "CO_APPLICANT", docType: "ID_FRONT", required: true, status: "UPLOADED" }),
+      slot({ personRole: "CO_APPLICANT", docType: "ID_BACK", required: true, status: "UPLOADED" }),
+      ...Array.from({ length: 3 }, () =>
+        slot({ personRole: "CO_APPLICANT", docType: "BANK_STATEMENT", required: true, status: "UPLOADED" })
+      ),
+    ];
+    const err = validateRequiredSlots(slots, {
+      incomeType: "EMPLOYED",
+      hasCoApplicant: true,
+      coApplicantIncomeType: "EMPLOYED",
+    });
+    assert.ok(err?.includes("spolužadatele"));
+  });
 });

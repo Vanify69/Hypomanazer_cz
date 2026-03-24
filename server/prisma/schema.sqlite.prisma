@@ -203,10 +203,12 @@ model IntakeSession {
   consentAt     DateTime?
   consentVersion String?
   state         IntakeSessionState @default(CREATED)
-  ico           String?            // IČ zadané v intake (OSVČ) – zobrazí se v „Základní údaje z DP“
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  uploadSlots   UploadSlot[]
+  ico               String?            // IČO hlavního žadatele (OSVČ / firma)
+  coApplicantIco    String?            // IČO spolužadatele (OSVČ / firma)
+  intakeMetadata    String?            // JSON: domácnost, vztah spolužadatele, poznámka (klient intake wizard)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  uploadSlots     UploadSlot[]
 }
 
 model UploadSlot {

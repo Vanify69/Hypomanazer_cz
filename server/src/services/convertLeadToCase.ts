@@ -68,6 +68,18 @@ export async function convertLeadToCase(intakeSessionId: string): Promise<{ case
     },
   });
 
+  const hasCoApplicantFiles = session.uploadSlots.some(
+    (s) => s.personRole === "CO_APPLICANT" && s.status === "UPLOADED" && s.storageKey
+  );
+  if (hasCoApplicantFiles) {
+    await prisma.person.create({
+      data: {
+        caseId,
+        role: "CO_APPLICANT",
+      },
+    });
+  }
+
   for (const slot of slotsWithFile) {
     const storageKey = slot.storageKey!;
     const srcPath = path.join(baseUploadDir, "intake", session.id, storageKey);
