@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { apiRequestPublic } from '../lib/api';
+import { useForceLightThemeForPublicPage } from '../hooks/useForceLightThemeForPublicPage';
 
 const LOAN_TYPES = [
   { value: 'PURCHASE', label: 'Koupě' },
@@ -9,6 +10,7 @@ const LOAN_TYPES = [
 ];
 
 export function RefForm() {
+  useForceLightThemeForPublicPage();
   const { token } = useParams<{ token: string }>();
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(true);

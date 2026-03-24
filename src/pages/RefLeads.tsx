@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { apiRequestPublic } from '../lib/api';
+import { useForceLightThemeForPublicPage } from '../hooks/useForceLightThemeForPublicPage';
 
 const LOAN_LABELS: Record<string, string> = {
   PURCHASE: 'Koupě',
@@ -32,6 +33,7 @@ interface LeadItem {
 }
 
 export function RefLeads() {
+  useForceLightThemeForPublicPage();
   const { token } = useParams<{ token: string }>();
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [loading, setLoading] = useState(true);

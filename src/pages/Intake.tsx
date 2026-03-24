@@ -192,28 +192,28 @@ export function Intake() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Načítání…</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <p className="text-gray-500 dark:text-gray-400">Načítání…</p>
       </div>
     );
   }
   if (error && !data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Neplatný nebo vypršený odkaz</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-sm text-gray-500">Kontaktujte svého poradce pro nový odkaz na nahrání podkladů.</p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Neplatný nebo vypršený odkaz</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Kontaktujte svého poradce pro nový odkaz na nahrání podkladů.</p>
         </div>
       </div>
     );
   }
   if (submitDone || data?.state === 'SUBMITTED' || data?.state === 'CONVERTED') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 max-w-md text-center">
-          <h1 className="text-xl font-semibold text-green-800 mb-2">Podklady byly odeslány</h1>
-          <p className="text-gray-600">Děkujeme. Váš poradce vás bude kontaktovat.</p>
+          <h1 className="text-xl font-semibold text-green-800 dark:text-green-300 mb-2">Podklady byly odeslány</h1>
+          <p className="text-gray-600 dark:text-gray-300">Děkujeme. Váš poradce vás bude kontaktovat.</p>
         </div>
       </div>
     );
@@ -253,15 +253,15 @@ export function Intake() {
   const renderSlotRow = (slot: UploadSlot) => (
     <div
       key={slot.id}
-      className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
+      className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-600"
     >
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-700">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-100">
           {DOC_LABELS[slot.docType] ?? slot.docType}
           {slot.required && ' *'}
         </p>
         {slot.period && (
-          <p className="text-xs text-gray-500 mt-0.5">Období: {slot.period}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Období: {slot.period}</p>
         )}
       </div>
       <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
@@ -316,16 +316,16 @@ export function Intake() {
     const allUploaded = uploaded === slots.length;
     const slotIds = slots.map((s) => s.id);
     return (
-      <div key={sectionKey} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+      <div key={sectionKey} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-600">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-700">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-100">
             Výpis z účtu (6 výpisů z různých měsíců) *
           </p>
         </div>
         <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
           {allUploaded ? (
             <>
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 text-green-700 text-sm font-medium border border-green-200">
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 text-sm font-medium border border-green-200 dark:border-green-800">
                 <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden />
                 Nahráno 6/6
               </div>
@@ -333,7 +333,7 @@ export function Intake() {
                 type="button"
                 onClick={() => handleClearBankSlots(slotIds)}
                 disabled={clearingSlot === 'bank-all'}
-                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
               >
                 {clearingSlot === 'bank-all' ? '…' : 'Změnit'}
               </button>
@@ -365,7 +365,7 @@ export function Intake() {
             </label>
           )}
           {uploaded > 0 && !allUploaded && (
-            <span className="text-sm text-gray-600">Nahráno {uploaded}/6</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">Nahráno {uploaded}/6</span>
           )}
         </div>
       </div>
@@ -408,31 +408,31 @@ export function Intake() {
             </div>
             {(incomeType === 'SELF_EMPLOYED' || incomeType === 'BOTH') && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">IČO *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">IČO *</label>
                 <input
                   type="text"
                   value={ico}
                   onChange={(e) => setIco(e.target.value)}
                   placeholder="Např. 12345678"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
           </div>
 
           <div className="space-y-6 mb-8">
-            <h2 className="font-medium text-gray-900">Dokumenty</h2>
-            <p className="text-sm text-gray-500 sm:hidden">
+            <h2 className="font-medium text-gray-900 dark:text-gray-100">Dokumenty</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 sm:hidden">
               Na telefonu u každého tlačítka zvolte „Vyfotit“ nebo „Galerie / Soubory“.
             </p>
 
             {/* Hlavní žadatel */}
-            <section className="space-y-3 rounded-xl border-2 border-blue-100 bg-blue-50/30 p-4">
-              <h3 className="text-base font-semibold text-blue-900 flex items-center gap-2">
+            <section className="space-y-3 rounded-xl border-2 border-blue-100 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/25 p-4">
+              <h3 className="text-base font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-500" aria-hidden />
                 Hlavní žadatel
               </h3>
-              <p className="text-xs text-gray-600">Dokumenty hlavního žadatele (OP, daňové přiznání, výpisy)</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Dokumenty hlavního žadatele (OP, daňové přiznání, výpisy)</p>
               <div className="space-y-3">
                 {applicantOtherSlots.map((slot) => renderSlotRow(slot))}
                 {renderBankBlock(applicantBankSlots, 'bank-applicant')}
@@ -441,12 +441,12 @@ export function Intake() {
 
             {/* Spolužadatel – jen když má spolužadatele */}
             {hasCoApplicant && (coApplicantOtherSlots.length > 0 || coApplicantBankSlots.length > 0) && (
-              <section className="space-y-3 rounded-xl border-2 border-slate-200 bg-slate-50/50 p-4">
-                <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+              <section className="space-y-3 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-900/40 p-4">
+                <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-slate-500" aria-hidden />
                   Spolužadatel
                 </h3>
-                <p className="text-xs text-gray-600">Dokumenty spolužadatele (OP, daňové přiznání, výpisy)</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Dokumenty spolužadatele (OP, daňové přiznání, výpisy)</p>
                 <div className="space-y-3">
                   {coApplicantOtherSlots.map((slot) => renderSlotRow(slot))}
                   {renderBankBlock(coApplicantBankSlots, 'bank-coapplicant')}
@@ -456,15 +456,15 @@ export function Intake() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <label className="flex items-start gap-2">
               <input
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-1 rounded border-gray-300"
+                className="mt-1 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               />
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 Souhlasím se zpracováním osobních údajů v rozsahu nezbytném pro posouzení mé žádosti (GDPR).
               </span>
             </label>
