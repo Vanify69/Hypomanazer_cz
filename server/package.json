@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "dev:all": "cd .. && npm run dev:all",
     "dev:worker": "tsx watch src/worker.ts",
-    "build": "npm run test && node scripts/select-schema.js && prisma generate && tsc",
+    "build": "node scripts/select-schema.js && prisma generate && npm run test && tsc",
     "test": "node --import tsx --test src/lib/tokens.test.ts src/lib/referrerStatus.test.ts src/lib/intakeValidation.test.ts src/modules/bankCalculators/excelMapping.test.ts",
     "start": "sh scripts/start.sh",
     "worker": "node dist/worker.js",
