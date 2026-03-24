@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Plus, Copy, Send, Search, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
+import { Plus, Copy, Send, Search, Pencil, Trash2, ArchiveRestore, ExternalLink } from 'lucide-react';
 import { getLeads, regenerateLeadLink, sendLeadLink, createLeadIntake, deleteLead, restoreLead, deleteLeadPermanently, type Lead } from '../lib/api';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -218,7 +218,7 @@ export function Leads() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto">
+    <div className="flex-1 bg-gray-50 app-content-dark overflow-auto">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6 sm:mb-8">
           <div className="min-w-0">
@@ -359,26 +359,26 @@ export function Leads() {
                         Upravit
                       </Link>
                       {showTrash ? (
-                        <>
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => handleRestore(lead)}
                             disabled={restoringId === lead.id || permanentDeletingId === lead.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50 min-h-[44px]"
+                            className="inline-flex items-center justify-center p-2 text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50 min-h-[44px] min-w-[44px]"
+                            title={restoringId === lead.id ? 'Obnovuji…' : 'Obnovit'}
                           >
-                            <ArchiveRestore className="w-4 h-4" />
-                            {restoringId === lead.id ? 'Obnovuji…' : 'Obnovit'}
+                            <ArchiveRestore className={`w-4 h-4 ${restoringId === lead.id ? 'animate-pulse' : ''}`} />
                           </button>
                           <button
                             type="button"
                             onClick={() => handlePermanentDelete(lead)}
                             disabled={restoringId === lead.id || permanentDeletingId === lead.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50 min-h-[44px]"
+                            className="inline-flex items-center justify-center p-2 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50 min-h-[44px] min-w-[44px]"
+                            title={permanentDeletingId === lead.id ? 'Odstraňuji…' : 'Trvale odstranit'}
                           >
-                            <Trash2 className="w-4 h-4" />
-                            Trvale smazat
+                            <Trash2 className={`w-4 h-4 ${permanentDeletingId === lead.id ? 'animate-pulse' : ''}`} />
                           </button>
-                        </>
+                        </div>
                       ) : (
                         <>
                           {isConceptWithoutIntake ? (
@@ -455,7 +455,7 @@ export function Leads() {
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Zdroj</th>
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Stav</th>
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Vytvořeno</th>
-                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 w-32">Akce</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 w-44">Akce</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
@@ -478,35 +478,33 @@ export function Leads() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(lead.createdAt)}</td>
-                        <td className="px-4 py-3 flex flex-wrap gap-2 items-center">
+                        <td className="px-4 py-3">
                           {showTrash ? (
-                            <>
+                            <div className="flex items-center gap-2 whitespace-nowrap">
                               <button
                                 type="button"
                                 onClick={() => handleRestore(lead)}
                                 disabled={restoringId === lead.id || permanentDeletingId === lead.id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
-                                title="Obnovit lead z koše"
+                                className="inline-flex items-center justify-center p-2 text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+                                title={restoringId === lead.id ? 'Obnovuji…' : 'Obnovit lead z koše'}
                               >
-                                <ArchiveRestore className="w-4 h-4" />
-                                {restoringId === lead.id ? 'Obnovuji…' : 'Obnovit'}
+                                <ArchiveRestore className={`w-4 h-4 ${restoringId === lead.id ? 'animate-pulse' : ''}`} />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handlePermanentDelete(lead)}
                                 disabled={restoringId === lead.id || permanentDeletingId === lead.id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                                title="Trvale odstranit lead"
+                                className="inline-flex items-center justify-center p-2 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                                title={permanentDeletingId === lead.id ? 'Odstraňuji…' : 'Trvale odstranit lead'}
                               >
-                                <Trash2 className="w-4 h-4" />
-                                {permanentDeletingId === lead.id ? 'Odstraňuji…' : 'Trvale odstranit'}
+                                <Trash2 className={`w-4 h-4 ${permanentDeletingId === lead.id ? 'animate-pulse' : ''}`} />
                               </button>
-                            </>
+                            </div>
                           ) : (
-                            <>
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
                               <Link
                                 to={`/leads/${lead.id}/edit`}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded"
+                                className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                                 title="Upravit lead"
                               >
                                 <Pencil className="w-4 h-4" />
@@ -527,7 +525,7 @@ export function Leads() {
                                     type="button"
                                     onClick={() => handleCopyLink(lead)}
                                     disabled={lead.status === 'SUBMITTED' || lead.status === 'CONVERTED' || lead.status === 'EXPIRED'}
-                                    className="p-2 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-50"
+                                    className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
                                     title="Zkopírovat odkaz"
                                   >
                                     {isCopying ? 'Zkopírováno' : <Copy className="w-4 h-4" />}
@@ -537,7 +535,7 @@ export function Leads() {
                                       type="button"
                                       onClick={() => handleSendLink(lead)}
                                       disabled={isSending}
-                                      className="p-2 text-gray-500 hover:bg-gray-100 rounded disabled:opacity-50"
+                                      className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
                                       title="Poslat link (SMS / e-mail)"
                                     >
                                       <Send className="w-4 h-4" />
@@ -557,13 +555,13 @@ export function Leads() {
                               {lead.convertedCaseId && (
                                 <Link
                                   to={`/case/${lead.convertedCaseId}`}
-                                  className="text-sm text-blue-600 hover:underline"
+                                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                                   title="Otevřít případ"
                                 >
-                                  Případ
+                                  <ExternalLink className="w-4 h-4" />
                                 </Link>
                               )}
-                            </>
+                            </div>
                           )}
                         </td>
                       </tr>

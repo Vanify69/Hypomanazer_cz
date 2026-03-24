@@ -85,7 +85,7 @@ export function BankTemplateSettingsCard({
             {BANK_META[bankCode].title}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Nahrajte vlastní soubor .xlsm (žádný sdílený default – pouze váš účet).
+            Nahrajte vlastní soubor .xlsm nebo .xlsx (žádný sdílený default – pouze váš účet).
           </p>
           {loading ? (
             <p className="text-sm text-gray-500 mt-2">Načítání…</p>
@@ -118,7 +118,7 @@ export function BankTemplateSettingsCard({
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsm,application/vnd.ms-excel.sheet.macroEnabled.12"
+            accept=".xlsm,.xlsx,application/vnd.ms-excel.sheet.macroEnabled.12,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
             onChange={onFile}
           />

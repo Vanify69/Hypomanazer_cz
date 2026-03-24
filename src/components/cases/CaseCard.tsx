@@ -3,73 +3,90 @@ import { Case } from '../../lib/types';
 import { StatusBadge } from './StatusBadge';
 import { Calendar, Banknote, Star, Loader2 } from 'lucide-react';
 
-interface CaseCardProps {
+export interface CaseCardProps {
   case: Case;
+  /** Volitelné – z Figmy: nastavení aktivního případu bez vstupu do detailu */
+  onSetActive?: (id: string) => void;
 }
 
-export function CaseCard({ case: caseData }: CaseCardProps) {
+export function CaseCard({ case: caseData, onSetActive }: CaseCardProps) {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
-    // Backend ukládá datum jako "13.2.2025" (cs-CZ) – new Date() to neumí
     const iso = new Date(dateStr).getTime();
     if (!Number.isNaN(iso)) return new Date(dateStr).toLocaleDateString('cs-CZ');
-    // Už je ve formátu d.m.yyyy
     if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(dateStr.trim())) return dateStr.trim();
     return dateStr;
   };
-  
+
   const formatCurrency = (amount?: number) => {
     if (!amount) return '—';
     return new Intl.NumberFormat('cs-CZ', {
       style: 'currency',
       currency: 'CZK',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
     }).format(amount);
   };
-  
+
   return (
-    <Link
-      to={`/case/${caseData.id}`}
-      className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all relative overflow-hidden"
-    >
-      {caseData.extractionInProgress && (
-        <div className="absolute inset-x-0 top-0 h-1 bg-blue-100 overflow-hidden" aria-hidden>
-          <div className="h-full min-w-[40%] w-1/3 animate-pulse bg-blue-500 rounded-r" />
-        </div>
-      )}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{caseData.jmeno}</h3>
-          {caseData.isActive && (
-            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-          )}
-          {caseData.extractionInProgress && (
-            <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium" title="Zpracovávají se data">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Zpracovávám data…
-            </span>
-          )}
-        </div>
-        <StatusBadge status={caseData.status} />
-      </div>
-      
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-          <Calendar className="w-4 h-4" />
-          <span>{formatDate(caseData.datum)}</span>
-        </div>
-        
-        {caseData.vyseUveru && (
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-            <Banknote className="w-4 h-4" />
-            <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(caseData.vyseUveru)}</span>
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600">
+      <Link
+        to={`/case/${caseData.id}`}
+        className="relative block overflow-hidden p-5"
+      >
+        {caseData.extractionInProgress && (
+          <div className="absolute inset-x-0 top-0 h-1 overflow-hidden bg-blue-100 dark:bg-blue-950" aria-hidden>
+            <div className="h-full min-w-[40%] w-1/3 animate-pulse rounded-r bg-blue-500" />
           </div>
         )}
-        
-        {caseData.ucel && (
-          <p className="text-gray-600 dark:text-gray-400 line-clamp-1">{caseData.ucel}</p>
-        )}
-      </div>
-    </Link>
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{caseData.jmeno}</h3>
+            {caseData.isActive && (
+              <Star className="h-4 w-4 shrink-0 fill-yellow-500 text-yellow-500" aria-label="Aktivní případ" />
+            )}
+            {caseData.extractionInProgress && (
+              <span
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400"
+                title="Zpracovávají se data"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Zpracovávám data…
+              </span>
+            )}
+          </div>
+          <StatusBadge status={caseData.status} />
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <Calendar className="h-4 w-4 shrink-0" />
+            <span>{formatDate(caseData.datum)}</span>
+          </div>
+
+          {caseData.vyseUveru ? (
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <Banknote className="h-4 w-4 shrink-0" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(caseData.vyseUveru)}</span>
+            </div>
+          ) : null}
+
+          {caseData.ucel ? (
+            <p className="line-clamp-2 text-gray-600 dark:text-gray-400">{caseData.ucel}</p>
+          ) : null}
+        </div>
+      </Link>
+
+      {onSetActive && !caseData.isActive ? (
+        <div className="border-t border-gray-200 px-5 py-2.5 dark:border-gray-700 dark:bg-gray-900/40">
+          <button
+            type="button"
+            onClick={() => onSetActive(caseData.id)}
+            className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            Nastavit jako aktivní případ
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }

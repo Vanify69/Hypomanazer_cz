@@ -32,7 +32,7 @@ export default function TrayIcon() {
               </Link>
               
               <Link
-                to="/nastaveni"
+                to="/settings"
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-50 text-sm text-gray-700"
               >

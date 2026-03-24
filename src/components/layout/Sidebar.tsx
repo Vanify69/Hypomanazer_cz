@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, FileText, Settings, LogOut, Users, X } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { LayoutDashboard, FileText, Settings, LogOut, Users, UserPlus, Calendar, X, Moon, Sun, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Case } from '../../lib/types';
 
@@ -15,6 +17,14 @@ export interface SidebarProps {
 export function Sidebar({ embedded = false, onClose, activeCase }: SidebarProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { setTheme, resolvedTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState(false);
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+
+  const isDark = resolvedTheme === 'dark';
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -23,8 +33,10 @@ export function Sidebar({ embedded = false, onClose, activeCase }: SidebarProps)
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/leads', icon: Users, label: 'Leady' },
     { path: '/cases', icon: FileText, label: 'Případy' },
+    { path: '/leads', icon: Users, label: 'Leady' },
+    { path: '/referrers', icon: UserPlus, label: 'Tipaři' },
+    { path: '/calendar', icon: Calendar, label: 'Kalendář' },
     { path: '/settings', icon: Settings, label: 'Nastavení' },
   ];
 
@@ -36,8 +48,8 @@ export function Sidebar({ embedded = false, onClose, activeCase }: SidebarProps)
             <FileText className="w-6 h-6 text-white" />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="font-semibold text-lg">HypoManager</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Zprostředkování hypoték</p>
+            <h1 className="font-semibold text-lg">HypoManažer</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Hypoteční CRM</p>
           </div>
           {embedded && onClose && (
             <button
@@ -76,43 +88,78 @@ export function Sidebar({ embedded = false, onClose, activeCase }: SidebarProps)
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 shrink-0">
-        <div className="mb-3 flex items-center gap-2 py-1.5 px-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 min-w-0 max-w-full">
-          <div className={`w-2 h-2 rounded-full shrink-0 ${activeCase ? 'bg-green-500' : 'bg-gray-300'}`} />
-          <FileText className="w-4 h-4 text-gray-600 dark:text-gray-300 shrink-0" />
+      <div className="p-4 space-y-3 shrink-0">
+        <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3 dark:border-gray-600 dark:bg-gray-700/50 min-w-0">
+          <div className="relative shrink-0">
+            <FileText className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <span
+              className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ring-2 ring-gray-100 dark:ring-gray-700/50 ${
+                activeCase ? 'bg-green-500' : 'bg-gray-400'
+              }`}
+            />
+          </div>
           <div className="min-w-0">
             <div className="text-xs text-gray-500 dark:text-gray-400">Aktivní případ</div>
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
               {activeCase ? activeCase.jmeno : 'Žádný'}
             </div>
           </div>
         </div>
-        {user?.email && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate px-2" title={user.email}>
-            {user.email}
-          </p>
+
+        {themeMounted && (
+          <button
+            type="button"
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800/80 dark:text-gray-100 dark:hover:bg-gray-700/80"
+          >
+            {isDark ? (
+              <>
+                <Sun className="h-4 w-4 shrink-0 text-amber-500" />
+                Světlý režim
+              </>
+            ) : (
+              <>
+                <Moon className="h-4 w-4 shrink-0 text-indigo-600" />
+                Tmavý režim
+              </>
+            )}
+          </button>
         )}
-        <button
-          type="button"
-          onClick={() => {
-            onClose?.();
-            logout();
-          }}
-          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          Odhlásit se
-        </button>
+
+        <div className="-mx-4 my-1 h-px w-[calc(100%+2rem)] bg-gray-200 dark:bg-gray-700" />
+
+        <div className="pt-1 flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 shrink-0">
+              <User className="h-5 w-5" />
+            </div>
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+              {user?.name || user?.email?.split('@')[0] || 'Uživatel'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onClose?.();
+              logout();
+            }}
+            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+            aria-label="Odhlásit se"
+            title="Odhlásit se"
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+          </button>
+        </div>
       </div>
     </>
   );
 
   if (embedded) {
-    return <div className="flex h-full w-full flex-col bg-white dark:bg-gray-800">{content}</div>;
+    return <div className="flex h-full w-full flex-col bg-white app-sidebar-dark">{content}</div>;
   }
 
   return (
-    <div className="w-64 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen flex flex-col">
+    <div className="flex h-full min-h-0 w-64 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-[var(--sidebar-border)] app-sidebar-dark">
       {content}
     </div>
   );

@@ -100,18 +100,18 @@ export function Root() {
   }, [activeCase]);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar jen na desktopu (lg 1024px+) – na mobilu i tabletu skrytý, menu v burgeru */}
-      <div className="sidebar-desktop-only shrink-0">
+    <div className="flex h-[100dvh] max-h-[100dvh] bg-gray-50 app-content-dark">
+      {/* Sidebar desktop – sticky vůči viewportu, Figma navy */}
+      <div className="sidebar-desktop-only app-sidebar-sticky-desktop shrink-0 overflow-hidden">
         <Sidebar activeCase={activeCase} />
       </div>
 
-      {/* Na mobilu/tabletu: menu jako sloupec vlevo + obsah vpravo (bez překrývání) */}
+      {/* Na mobilu/tabletu: menu jako sloupec vlevo + obsah vpravo */}
       <div className="flex flex-1 min-w-0 overflow-hidden">
         {/* Mobilní menu – levý sloupec, když je otevřené; obsah se posune doprava (zavření jen přes ikonu v hlavičce) */}
         {mobileMenuOpen && (
           <div
-            className="flex shrink-0 flex-col overflow-hidden border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+            className="flex shrink-0 flex-col overflow-hidden border-r border-gray-200 bg-white dark:border-[var(--sidebar-border)] app-sidebar-dark"
             style={{ width: 'min(16rem, 85vw)' }}
             role="navigation"
             aria-label="Menu"
@@ -125,7 +125,7 @@ export function Root() {
         {/* Hlavní oblast: mobilní hlavička + obsah (vedle menu, ne pod ním) */}
         <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
           {/* Mobilní hlavička: zavřené = logo + burger; na mobilu bez systémové lišty (slouží k identifikaci aktivního případu v prohlížeči), na tabletu v sidebaru */}
-          <header className="sidebar-mobile-header shrink-0 flex flex-col gap-2 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 app-safe-area-padding relative z-10">
+          <header className="sidebar-mobile-header shrink-0 flex flex-col gap-2 px-4 py-3 bg-white app-sidebar-dark border-b border-gray-200 dark:border-[var(--sidebar-border)] app-safe-area-padding relative z-10">
             {!mobileMenuOpen && (
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -133,8 +133,8 @@ export function Root() {
                     <FileText className="h-6 w-6 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="font-semibold text-lg text-gray-900 dark:text-gray-100 break-words">HypoManager</h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 break-words">Zprostředkování hypoték</p>
+                    <h1 className="font-semibold text-lg text-gray-900 dark:text-gray-100 break-words">HypoManažer</h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 break-words">Hypoteční CRM</p>
                   </div>
                 </div>
                 <button
@@ -150,9 +150,13 @@ export function Root() {
             )}
           </header>
 
-          <main className="flex-1 min-h-0 overflow-auto">
-            <TopBar />
-            <Outlet />
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="app-layout-sticky-topbar">
+              <TopBar />
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

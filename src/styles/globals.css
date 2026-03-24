@@ -42,25 +42,30 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  color-scheme: dark;
+  /* Dark palette dle zadání: gray-800 / gray-900 / gray-700 */
+  --sidebar-bg: #1f2937; /* gray-800 */
+  --content-bg: #111827; /* gray-900 */
+  --background: #111827; /* gray-900 */
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
+  --card: #1f2937; /* Figma/Newdesign: dark card surface */
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
+  --popover: #1f2937;
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: oklch(0.65 0.2 264);
+  --primary-foreground: #ffffff;
+  --secondary: #1f2937; /* gray-800 */
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --muted: #1f2937; /* gray-800 */
+  --muted-foreground: oklch(0.65 0.02 264);
+  --accent: #374151; /* gray-700 */
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: #ffffff;
+  --border: #374151; /* gray-700 */
+  --input: #374151; /* gray-700 */
+  --input-background: #374151; /* gray-700 */
+  --ring: oklch(0.55 0.2 264);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --chart-1: oklch(0.488 0.243 264.376);
@@ -68,14 +73,14 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
+  --sidebar: #1f2937; /* gray-800 */
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-primary: oklch(0.65 0.2 264);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #374151; /* gray-700 */
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar-border: #374151; /* gray-700 */
+  --sidebar-ring: oklch(0.55 0.2 264);
 }
 
 @theme inline {
@@ -131,9 +136,6 @@
   }
 }
 
-/**
- * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
- */
 @layer base {
   :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h1 {
@@ -141,37 +143,31 @@
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     h2 {
       font-size: var(--text-xl);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     h3 {
       font-size: var(--text-lg);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     h4 {
       font-size: var(--text-base);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     label {
       font-size: var(--text-base);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     button {
       font-size: var(--text-base);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     input {
       font-size: var(--text-base);
       font-weight: var(--font-weight-normal);

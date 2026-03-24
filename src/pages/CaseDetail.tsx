@@ -600,14 +600,14 @@ export function CaseDetail() {
   
   if (loading) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center">
+      <div className="flex-1 bg-gray-50 app-content-dark flex items-center justify-center">
         <p className="text-gray-500">Načítání…</p>
       </div>
     );
   }
   if (!caseData) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center">
+      <div className="flex-1 bg-gray-50 app-content-dark flex items-center justify-center">
         <p className="text-gray-500">Případ nenalezen</p>
       </div>
     );
@@ -628,7 +628,7 @@ export function CaseDetail() {
 
   return (
     <>
-    <div className="flex-1 bg-gray-50 overflow-auto min-h-screen">
+    <div className="flex-1 bg-gray-50 app-content-dark overflow-auto min-h-screen">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <Link
           to="/"
@@ -694,7 +694,7 @@ export function CaseDetail() {
                 <select
                   value={caseData.dealStatus ?? 'NEW'}
                   onChange={(e) => handleDealStatusChange(e.target.value as DealStatus)}
-                  className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0 flex-1 lg:flex-none max-w-full w-full sm:w-auto sm:min-w-[10rem]"
+                  className="text-sm border border-border rounded-lg px-3 py-1.5 bg-card text-foreground focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0 flex-1 lg:flex-none max-w-full w-full sm:w-auto sm:min-w-[10rem]"
                 >
                   {DEAL_STATUS_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -707,7 +707,7 @@ export function CaseDetail() {
 
             {/* Údaje o úvěru – šedé pouzdří */}
             <div
-              className="mt-6 p-5 bg-gray-50 border border-gray-200 shadow-sm"
+              className="mt-6 p-5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 shadow-sm"
               style={{ borderRadius: 16 }}
             >
               <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
@@ -716,7 +716,7 @@ export function CaseDetail() {
                   <button
                     type="button"
                     onClick={() => setEditingUver(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-h-[44px] lg:min-h-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors min-h-[44px] lg:min-h-0"
                     aria-label="Editovat údaje o úvěru"
                   >
                     <Pencil className="w-4 h-4 shrink-0" />
@@ -802,7 +802,7 @@ export function CaseDetail() {
           ) : (
             <div className="app-applicants-box p-6 border-t border-gray-100">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold text-gray-900">Žadatelé (0)</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Žadatelé (0)</h2>
                 <button
                   type="button"
                   onClick={handleAddCoApplicant}
@@ -821,7 +821,7 @@ export function CaseDetail() {
         {/* Karta 3: záložky a obsah */}
         <div className="app-card app-card-joined-bottom">
           {/* Tabs – horizontální scroll na mobilu */}
-          <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-stretch overflow-x-auto">
+          <div className="border-b border-border bg-card flex items-stretch overflow-x-auto">
             <nav className="flex space-x-1 px-4 sm:px-6 flex-1 min-w-0 overflow-x-auto" aria-label="Záložky">
               <div className="flex gap-1 flex-nowrap py-0">
                 {CONTENT_TABS.map(({ id, label, icon: Icon }) => (
@@ -849,7 +849,7 @@ export function CaseDetail() {
           {contentTab === 'osobni' && (
             <div className="p-6">
               <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Osobní údaje žadatele</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Osobní údaje žadatele</h2>
                 <button
                   type="button"
                   onClick={handleReparseOpFromCache}
@@ -911,7 +911,7 @@ export function CaseDetail() {
           {contentTab === 'op' && (
             <div className="p-6">
               <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Data z OP</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Data z OP</h2>
                 <button
                   type="button"
                   onClick={handleReparseOpFromCache}
@@ -980,7 +980,7 @@ export function CaseDetail() {
                   return (
                     <>
                       <div className="flex items-center justify-between gap-3 mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">Data z daňového přiznání</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Data z daňového přiznání</h2>
                         <button
                           type="button"
                           onClick={handleReparseDpFromCache}
@@ -1078,7 +1078,7 @@ export function CaseDetail() {
                 return (
                   <>
                     <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
-                      <h2 className="text-lg font-semibold text-gray-900">
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         Daňové přiznání{basic.rokZdanovaciObdobi != null ? ` za rok ${basic.rokZdanovaciObdobi}` : ''}
                       </h2>
                       <div className="flex items-center gap-3">
@@ -1193,7 +1193,7 @@ export function CaseDetail() {
           {contentTab === 'vypisy' && (
             <div className="p-6">
               <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Data z bankovních výpisů</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Data z bankovních výpisů</h2>
                 <button
                   type="button"
                   onClick={handleReparseVypisyFromCache}
@@ -1381,7 +1381,7 @@ export function CaseDetail() {
           {contentTab === 'podklady' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <FileText className="w-5 h-5" />
                   Nahrané podklady
                 </h2>

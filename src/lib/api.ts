@@ -299,6 +299,7 @@ export interface Referrer {
   email?: string;
   phone?: string;
   payoutMethod: string;
+  agreedCommissionPercent?: number;
   bankAccount?: string;
   invoiceCompanyName?: string;
   invoiceIco?: string;
@@ -327,6 +328,7 @@ export async function createReferrer(body: {
   email?: string;
   phone?: string;
   payoutMethod?: string;
+  agreedCommissionPercent?: number;
   bankAccount?: string;
   invoiceCompanyName?: string;
   invoiceIco?: string;
@@ -347,6 +349,7 @@ export async function updateReferrer(
     email?: string;
     phone?: string;
     payoutMethod?: string;
+    agreedCommissionPercent?: number;
     bankAccount?: string;
     invoiceCompanyName?: string;
     invoiceIco?: string;

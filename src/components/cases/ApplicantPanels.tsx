@@ -51,8 +51,8 @@ export function ApplicantPanels({
         <div className="app-applicant-header flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-gray-500 shrink-0" aria-hidden />
-              <h2 className="text-lg font-semibold text-gray-900">
+              <Users className="w-5 h-5 text-gray-500 dark:text-gray-400 shrink-0" aria-hidden />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Žadatelé ({applicants.length})
               </h2>
             </div>
@@ -105,7 +105,7 @@ export function ApplicantPanels({
                   />
                   <span
                     className={`app-applicant-role truncate min-w-0 ${
-                      isActive ? 'text-blue-700' : 'text-gray-500'
+                      isActive ? 'text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-gray-300'
                     }`}
                   >
                     {isMain ? 'HLAVNÍ ŽADATEL' : 'SPOLUŽADATEL'}
@@ -133,11 +133,11 @@ export function ApplicantPanels({
 
                 <div className="app-applicant-text-block">
                   <p
-                    className={`font-semibold truncate flex-shrink-0 ${isActive ? 'text-gray-900' : 'text-gray-600'}`}
+                    className={`font-semibold truncate flex-shrink-0 ${isActive ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-200'}`}
                   >
                     {getDisplayName(a)}
                   </p>
-                  <p className="text-sm text-gray-500 mt-0.5 flex-shrink-0">{getRc(a)}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-300 mt-0.5 flex-shrink-0">{getRc(a)}</p>
                 </div>
 
                 {/* Tlačítko „Nastavit jako hlavního žadatele“ u všech spolužadatelů (u mock disabled) */}

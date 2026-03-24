@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { Calendar, Phone, CheckSquare, Bell, MapPin, Clock, X } from 'lucide-react';
+import { Calendar, Phone, CheckSquare, Bell, MapPin, Clock } from 'lucide-react';
 import type { CalendarEvent, CalendarEventInput } from '../../lib/api';
 
 const EVENT_TYPES = [
@@ -90,15 +90,6 @@ export function EventForm({ event, defaultDate, onSubmit, onCancel, cases }: Eve
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {isEdit ? 'Upravit událost' : 'Nová událost'}
-        </h2>
-        <button type="button" onClick={onCancel} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
-      </div>
-
       {/* Typ události */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {EVENT_TYPES.map((t) => {

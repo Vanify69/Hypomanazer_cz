@@ -7,7 +7,7 @@ export default function Sidebar() {
   const links = [
     { to: "/", icon: Home, label: "Přehled případů" },
     { to: "/novy-pripad", icon: FolderPlus, label: "Nový případ" },
-    { to: "/nastaveni", icon: Settings, label: "Nastavení" },
+    { to: "/settings", icon: Settings, label: "Nastavení" },
   ];
 
   return (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Plus, Copy, Send, Pencil } from 'lucide-react';
+import { Plus, Copy, Send, Pencil, ExternalLink } from 'lucide-react';
 import { getReferrers, sendReferrerLink, regenerateReferrerLink, type Referrer } from '../lib/api';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -105,7 +105,7 @@ export function Referrers() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto">
+    <div className="flex-1 bg-gray-50 app-content-dark overflow-auto">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6 sm:mb-8">
           <div className="min-w-0">
@@ -233,7 +233,7 @@ export function Referrers() {
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Kontakt</th>
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Počet leadů</th>
                     <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Vytvořeno</th>
-                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 w-32">Akce</th>
+                    <th className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300 w-44">Akce</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
@@ -245,7 +245,8 @@ export function Referrers() {
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{displayContact(r)}</td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{r.leadCount ?? 0}</td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(r.createdAt)}</td>
-                      <td className="px-4 py-3 flex flex-wrap gap-2 items-center">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <Link
                           to={`/referrers/${r.id}/edit`}
                           className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
@@ -263,9 +264,10 @@ export function Referrers() {
                         </button>
                         <Link
                           to={`/referrers/${r.id}/leads`}
-                          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                          title="Zobrazit leady tipaře"
                         >
-                          Leady
+                          <ExternalLink className="w-4 h-4" />
                         </Link>
                         {(r.email || r.phone) && (
                           <button
@@ -278,6 +280,7 @@ export function Referrers() {
                             <Send className="w-4 h-4" />
                           </button>
                         )}
+                        </div>
                       </td>
                     </tr>
                   ))}

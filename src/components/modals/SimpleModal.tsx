@@ -23,9 +23,6 @@ export function SimpleModal({
   children,
   renderInPortal = true,
 }: SimpleModalProps) {
-  if (typeof window !== 'undefined' && open) {
-    console.log('[SimpleModal] render – open=true, portál do body');
-  }
   useEffect(() => {
     if (!open) return;
     const onEscape = (e: KeyboardEvent) => {
@@ -69,20 +66,11 @@ export function SimpleModal({
       />
       <div
         id="simple-modal-title"
-        style={{
-          position: 'relative',
-          zIndex: 2,
-          width: '100%',
-          maxWidth: 512,
-          borderRadius: 8,
-          border: '1px solid #e5e7eb',
-          backgroundColor: '#ffffff',
-          padding: 24,
-          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-        }}
+        className="relative z-[2] w-full max-w-[512px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-xl"
+        style={{ position: 'relative', zIndex: 2 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', marginBottom: 16 }}>{title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{title}</h2>
         {children}
       </div>
     </div>
