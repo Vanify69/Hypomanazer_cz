@@ -26,6 +26,25 @@
     <span>Zobrazit nástroje pro správu mappingů (admin)</span>
   </label>
   <p class="hint">Po zapnutí se v popupu rozšíření zobrazí sekce „Procházet DOM“ – procházení stránky banky a export mapování polí do mapping packu.</p>
+
+  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+    <label style="display: block; margin-bottom: 0.5rem;">
+      <strong>Heslo pro admin nástroje</strong>
+    </label>
+    <input
+      type="password"
+      id="admin-password"
+      placeholder="Nastav heslo (min. 6 znaků)"
+      style="width: 100%; padding: 0.5rem; margin-bottom: 0.25rem; box-sizing: border-box;"
+      autocomplete="new-password"
+    />
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0;">
+      <button id="set-admin-password" type="button" style="padding: 0.5rem 0.75rem;">Uložit heslo</button>
+      <button id="clear-admin-password" type="button" style="padding: 0.5rem 0.75rem;">Odebrat heslo</button>
+    </div>
+    <div id="admin-password-status" class="hint"></div>
+    <p class="hint">Heslo se neukládá v čitelné podobě. V popupu se admin sekce zobrazí až po zadání hesla.</p>
+  </div>
   <script src="options.js"></script>
 </body>
 </html>

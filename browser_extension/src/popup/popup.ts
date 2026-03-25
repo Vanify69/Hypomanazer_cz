@@ -3,6 +3,8 @@
  * Pairing, výběr žadatele, akce vyplnění, zobrazení reportu, admin: procházení DOM a export mapping packu.
  */
 
+export {};
+
 const pairForm = document.getElementById("pair-form") as HTMLFormElement | null;
 const pairCodeInput = document.getElementById("pair-code") as HTMLInputElement | null;
 const pairStatus = document.getElementById("pair-status") as HTMLElement | null;
@@ -18,6 +20,14 @@ const exportMappingBtn = document.getElementById("export-mapping-btn") as HTMLBu
 const sendMappingBtn = document.getElementById("send-mapping-btn") as HTMLButtonElement | null;
 const sendMappingStatus = document.getElementById("send-mapping-status") as HTMLElement | null;
 const exportOutput = document.getElementById("export-output") as HTMLTextAreaElement | null;
+const adminPasswordUnlockInput = document.getElementById("admin-password-unlock") as HTMLInputElement | null;
+const adminUnlockBtn = document.getElementById("admin-unlock-btn") as HTMLButtonElement | null;
+const adminLockBtn = document.getElementById("admin-lock-btn") as HTMLButtonElement | null;
+const adminLockStatus = document.getElementById("admin-lock-status") as HTMLElement | null;
+
+const ADMIN_PASSWORD_HASH_KEY = "adminPasswordHash";
+const ADMIN_UNLOCK_UNTIL_KEY = "adminUnlockedUntil";
+const ADMIN_UNLOCK_TTL_MS = 8 * 60 * 60 * 1000; // 8 hodin
 
 const MAPPING_PATH_OPTIONS: { value: string; label: string; source: "applicant" | "loan" | "property"; path: string }[] = [
   { value: "", label: "— nemapovat", source: "applicant", path: "" },
@@ -89,11 +99,57 @@ function showPairStatus(paired: boolean) {
   pairStatus.className = paired ? "status ok" : "status warn";
 }
 
+function showAdminLockStatus(text: string) {
+  if (!adminLockStatus) return;
+  adminLockStatus.textContent = text;
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const enc = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function isAdminUnlocked(): Promise<boolean> {
+  const s = await chrome.storage.session.get(ADMIN_UNLOCK_UNTIL_KEY);
+  const until = typeof s[ADMIN_UNLOCK_UNTIL_KEY] === "number" ? (s[ADMIN_UNLOCK_UNTIL_KEY] as number) : 0;
+  return until > Date.now();
+}
+
+function setAdminControlsEnabled(enabled: boolean) {
+  if (domScanBtn) domScanBtn.disabled = !enabled;
+  if (exportMappingBtn) exportMappingBtn.disabled = !enabled;
+  if (sendMappingBtn) sendMappingBtn.disabled = !enabled;
+  if (adminPasswordUnlockInput) adminPasswordUnlockInput.disabled = enabled; // po odemčení zamknout input
+  if (adminUnlockBtn) adminUnlockBtn.disabled = enabled;
+  if (adminLockBtn) adminLockBtn.disabled = !enabled;
+}
+
 async function init() {
   const res = await chrome.runtime.sendMessage({ type: "PAIR_STATUS" });
   showPairStatus(res?.paired ?? false);
   const { adminMappingTools } = await chrome.storage.local.get("adminMappingTools");
   if (adminSection) adminSection.hidden = !adminMappingTools;
+  if (!adminMappingTools) return;
+
+  const local = await chrome.storage.local.get(ADMIN_PASSWORD_HASH_KEY);
+  const hasPassword = !!local[ADMIN_PASSWORD_HASH_KEY];
+  if (!hasPassword) {
+    showAdminLockStatus("Admin nástroje jsou zapnuté, ale není nastavené heslo. Nastav ho v Možnostech rozšíření.");
+    setAdminControlsEnabled(false);
+    return;
+  }
+
+  const unlocked = await isAdminUnlocked();
+  if (unlocked) {
+    showAdminLockStatus("Admin režim je odemčený.");
+    setAdminControlsEnabled(true);
+  } else {
+    showAdminLockStatus("Admin režim je zamčený. Zadej heslo pro odemknutí.");
+    setAdminControlsEnabled(false);
+  }
 }
 
 pairForm?.addEventListener("submit", async (e) => {
@@ -264,6 +320,35 @@ sendMappingBtn?.addEventListener("click", async () => {
     sendMappingStatus.textContent = "Chyba: " + (res?.error ?? "neznámá");
     sendMappingStatus.className = "send-status error";
   }
+});
+
+adminUnlockBtn?.addEventListener("click", async () => {
+  const pwd = adminPasswordUnlockInput?.value ?? "";
+  if (!pwd.trim()) {
+    showAdminLockStatus("Zadej heslo.");
+    return;
+  }
+  const local = await chrome.storage.local.get(ADMIN_PASSWORD_HASH_KEY);
+  const expected = (local[ADMIN_PASSWORD_HASH_KEY] as string) || "";
+  if (!expected) {
+    showAdminLockStatus("Heslo není nastavené. Nastav ho v Možnostech rozšíření.");
+    return;
+  }
+  const actual = await sha256Hex(pwd.trim());
+  if (actual !== expected) {
+    showAdminLockStatus("Nesprávné heslo.");
+    return;
+  }
+  await chrome.storage.session.set({ [ADMIN_UNLOCK_UNTIL_KEY]: Date.now() + ADMIN_UNLOCK_TTL_MS });
+  if (adminPasswordUnlockInput) adminPasswordUnlockInput.value = "";
+  showAdminLockStatus("Admin režim je odemčený.");
+  setAdminControlsEnabled(true);
+});
+
+adminLockBtn?.addEventListener("click", async () => {
+  await chrome.storage.session.remove(ADMIN_UNLOCK_UNTIL_KEY);
+  showAdminLockStatus("Admin režim je zamčený.");
+  setAdminControlsEnabled(false);
 });
 
 init();

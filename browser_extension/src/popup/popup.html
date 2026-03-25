@@ -35,6 +35,14 @@
   <section id="admin-mapping-section" class="admin-only" hidden>
     <h2>Správa mappingů (admin)</h2>
     <p class="hint">Otevři stránku banky v této záložce, pak klikni níže. Pole ze stránky namapuj a exportuj do mapping packu.</p>
+    <div id="admin-lock" class="admin-lock">
+      <div class="admin-lock-row">
+        <input type="password" id="admin-password-unlock" placeholder="Heslo pro admin nástroje" autocomplete="current-password" />
+        <button id="admin-unlock-btn" type="button">Odemknout</button>
+        <button id="admin-lock-btn" type="button">Zamknout</button>
+      </div>
+      <div id="admin-lock-status" class="hint"></div>
+    </div>
     <button id="dom-scan-btn">Procházet DOM na této stránce</button>
     <div id="dom-scan-status"></div>
     <div id="dom-mapping-list"></div>
