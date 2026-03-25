@@ -20,14 +20,11 @@ const exportMappingBtn = document.getElementById("export-mapping-btn") as HTMLBu
 const sendMappingBtn = document.getElementById("send-mapping-btn") as HTMLButtonElement | null;
 const sendMappingStatus = document.getElementById("send-mapping-status") as HTMLElement | null;
 const exportOutput = document.getElementById("export-output") as HTMLTextAreaElement | null;
-const adminPasswordUnlockInput = document.getElementById("admin-password-unlock") as HTMLInputElement | null;
-const adminUnlockBtn = document.getElementById("admin-unlock-btn") as HTMLButtonElement | null;
+const adminSendCodeBtn = document.getElementById("admin-send-code-btn") as HTMLButtonElement | null;
+const adminOtpCodeInput = document.getElementById("admin-otp-code") as HTMLInputElement | null;
+const adminVerifyCodeBtn = document.getElementById("admin-verify-code-btn") as HTMLButtonElement | null;
 const adminLockBtn = document.getElementById("admin-lock-btn") as HTMLButtonElement | null;
 const adminLockStatus = document.getElementById("admin-lock-status") as HTMLElement | null;
-
-const ADMIN_PASSWORD_HASH_KEY = "adminPasswordHash";
-const ADMIN_UNLOCK_UNTIL_KEY = "adminUnlockedUntil";
-const ADMIN_UNLOCK_TTL_MS = 8 * 60 * 60 * 1000; // 8 hodin
 
 const MAPPING_PATH_OPTIONS: { value: string; label: string; source: "applicant" | "loan" | "property"; path: string }[] = [
   { value: "", label: "— nemapovat", source: "applicant", path: "" },
@@ -104,26 +101,12 @@ function showAdminLockStatus(text: string) {
   adminLockStatus.textContent = text;
 }
 
-async function sha256Hex(text: string): Promise<string> {
-  const enc = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-async function isAdminUnlocked(): Promise<boolean> {
-  const s = await chrome.storage.session.get(ADMIN_UNLOCK_UNTIL_KEY);
-  const until = typeof s[ADMIN_UNLOCK_UNTIL_KEY] === "number" ? (s[ADMIN_UNLOCK_UNTIL_KEY] as number) : 0;
-  return until > Date.now();
-}
-
 function setAdminControlsEnabled(enabled: boolean) {
   if (domScanBtn) domScanBtn.disabled = !enabled;
   if (exportMappingBtn) exportMappingBtn.disabled = !enabled;
   if (sendMappingBtn) sendMappingBtn.disabled = !enabled;
-  if (adminPasswordUnlockInput) adminPasswordUnlockInput.disabled = enabled; // po odemčení zamknout input
-  if (adminUnlockBtn) adminUnlockBtn.disabled = enabled;
+  if (adminOtpCodeInput) adminOtpCodeInput.disabled = enabled;
+  if (adminVerifyCodeBtn) adminVerifyCodeBtn.disabled = enabled;
   if (adminLockBtn) adminLockBtn.disabled = !enabled;
 }
 
@@ -133,21 +116,12 @@ async function init() {
   const { adminMappingTools } = await chrome.storage.local.get("adminMappingTools");
   if (adminSection) adminSection.hidden = !adminMappingTools;
   if (!adminMappingTools) return;
-
-  const local = await chrome.storage.local.get(ADMIN_PASSWORD_HASH_KEY);
-  const hasPassword = !!local[ADMIN_PASSWORD_HASH_KEY];
-  if (!hasPassword) {
-    showAdminLockStatus("Admin nástroje jsou zapnuté, ale není nastavené heslo. Nastav ho v Možnostech rozšíření.");
-    setAdminControlsEnabled(false);
-    return;
-  }
-
-  const unlocked = await isAdminUnlocked();
-  if (unlocked) {
-    showAdminLockStatus("Admin režim je odemčený.");
+  const status = await chrome.runtime.sendMessage({ type: "ADMIN_STATUS" });
+  if (status?.ok && status.unlocked) {
+    showAdminLockStatus(`Admin režim je odemčený do ${new Date(status.expiresAt).toLocaleString("cs-CZ")}.`);
     setAdminControlsEnabled(true);
   } else {
-    showAdminLockStatus("Admin režim je zamčený. Zadej heslo pro odemknutí.");
+    showAdminLockStatus("Admin režim je zamčený. Klikni „Poslat kód“, pak zadej kód z e‑mailu.");
     setAdminControlsEnabled(false);
   }
 }
@@ -322,31 +296,37 @@ sendMappingBtn?.addEventListener("click", async () => {
   }
 });
 
-adminUnlockBtn?.addEventListener("click", async () => {
-  const pwd = adminPasswordUnlockInput?.value ?? "";
-  if (!pwd.trim()) {
-    showAdminLockStatus("Zadej heslo.");
+adminSendCodeBtn?.addEventListener("click", async () => {
+  showAdminLockStatus("Odesílám kód na e‑mail…");
+  const res = await chrome.runtime.sendMessage({ type: "ADMIN_OTP_START" });
+  if (res?.ok) {
+    const exp = res.expiresAt ? new Date(res.expiresAt).toLocaleString("cs-CZ") : "";
+    showAdminLockStatus(`Kód byl odeslán na e‑mail. Platnost do ${exp}.`);
+  } else {
+    showAdminLockStatus("Chyba: " + (res?.error ?? "neznámá"));
+  }
+});
+
+adminVerifyCodeBtn?.addEventListener("click", async () => {
+  const code = adminOtpCodeInput?.value?.trim() ?? "";
+  if (!code) {
+    showAdminLockStatus("Zadej kód z e‑mailu.");
     return;
   }
-  const local = await chrome.storage.local.get(ADMIN_PASSWORD_HASH_KEY);
-  const expected = (local[ADMIN_PASSWORD_HASH_KEY] as string) || "";
-  if (!expected) {
-    showAdminLockStatus("Heslo není nastavené. Nastav ho v Možnostech rozšíření.");
-    return;
+  showAdminLockStatus("Ověřuji kód…");
+  const res = await chrome.runtime.sendMessage({ type: "ADMIN_OTP_CONFIRM", code });
+  if (res?.ok) {
+    if (adminOtpCodeInput) adminOtpCodeInput.value = "";
+    const exp = res.adminTokenExpiresAt ? new Date(res.adminTokenExpiresAt).toLocaleString("cs-CZ") : "";
+    showAdminLockStatus(`Admin režim je odemčený do ${exp}.`);
+    setAdminControlsEnabled(true);
+  } else {
+    showAdminLockStatus("Chyba: " + (res?.error ?? "neznámá"));
   }
-  const actual = await sha256Hex(pwd.trim());
-  if (actual !== expected) {
-    showAdminLockStatus("Nesprávné heslo.");
-    return;
-  }
-  await chrome.storage.session.set({ [ADMIN_UNLOCK_UNTIL_KEY]: Date.now() + ADMIN_UNLOCK_TTL_MS });
-  if (adminPasswordUnlockInput) adminPasswordUnlockInput.value = "";
-  showAdminLockStatus("Admin režim je odemčený.");
-  setAdminControlsEnabled(true);
 });
 
 adminLockBtn?.addEventListener("click", async () => {
-  await chrome.storage.session.remove(ADMIN_UNLOCK_UNTIL_KEY);
+  await chrome.runtime.sendMessage({ type: "ADMIN_LOCK" });
   showAdminLockStatus("Admin režim je zamčený.");
   setAdminControlsEnabled(false);
 });

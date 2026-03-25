@@ -76,7 +76,11 @@ export type Msg =
   | { type: "FILL_SECTION"; sectionId: string }
   | { type: "FILL_FIELD"; fieldId: string }
   | { type: "RUN_DOM_SCAN"; tabId: number }
-  | { type: "SEND_MAPPING"; pack: BankMappingPack };
+  | { type: "SEND_MAPPING"; pack: BankMappingPack }
+  | { type: "ADMIN_OTP_START" }
+  | { type: "ADMIN_OTP_CONFIRM"; code: string }
+  | { type: "ADMIN_STATUS" }
+  | { type: "ADMIN_LOCK" };
 
 export type FillRequest = {
   type: "FILL_REQUEST";

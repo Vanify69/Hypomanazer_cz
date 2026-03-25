@@ -17,6 +17,14 @@ async function getApiBase(): Promise<string> {
   return url || DEFAULT_API_BASE;
 }
 
+async function getAdminToken(): Promise<{ token: string; expiresAt: number } | null> {
+  const s = await chrome.storage.session.get(["adminToken", "adminTokenExpiresAt"]);
+  if (!s.adminToken || !s.adminTokenExpiresAt) return null;
+  const exp = new Date(s.adminTokenExpiresAt as string).getTime();
+  if (Number.isNaN(exp) || exp <= Date.now() + 60_000) return null;
+  return { token: s.adminToken as string, expiresAt: exp };
+}
+
 async function getInstallationId(): Promise<string> {
   const out = await chrome.storage.local.get("installationId");
   if (out.installationId) return out.installationId;
@@ -343,6 +351,66 @@ chrome.runtime.onMessage.addListener(
           } catch (e) {
             sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) });
           }
+          return;
+        }
+
+        case "ADMIN_STATUS": {
+          const token = await getAdminToken();
+          sendResponse({ ok: true, unlocked: !!token, expiresAt: token ? new Date(token.expiresAt).toISOString() : null });
+          return;
+        }
+
+        case "ADMIN_LOCK": {
+          await chrome.storage.session.remove(["adminToken", "adminTokenExpiresAt"]);
+          sendResponse({ ok: true });
+          return;
+        }
+
+        case "ADMIN_OTP_START": {
+          const token = await getAccessToken();
+          if (!token) {
+            sendResponse({ ok: false, error: "Nejsi spárovaný s HypoManagerem." });
+            return;
+          }
+          const API_BASE = await getApiBase();
+          const res = await fetch(`${API_BASE}/api/integrations/browser-extension/admin/start`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            sendResponse({ ok: false, error: (data as { error?: string }).error ?? res.statusText });
+            return;
+          }
+          sendResponse({ ok: true, expiresAt: (data as any).expiresAt, delivered: (data as any).delivered });
+          return;
+        }
+
+        case "ADMIN_OTP_CONFIRM": {
+          const code = String((message as { code: string }).code ?? "").trim();
+          const token = await getAccessToken();
+          if (!token) {
+            sendResponse({ ok: false, error: "Nejsi spárovaný s HypoManagerem." });
+            return;
+          }
+          const API_BASE = await getApiBase();
+          const res = await fetch(`${API_BASE}/api/integrations/browser-extension/admin/confirm`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ code }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            sendResponse({ ok: false, error: (data as { error?: string }).error ?? res.statusText });
+            return;
+          }
+          const adminToken = (data as any).adminToken as string;
+          const adminTokenExpiresAt = (data as any).adminTokenExpiresAt as string;
+          await chrome.storage.session.set({ adminToken, adminTokenExpiresAt });
+          sendResponse({ ok: true, adminTokenExpiresAt });
           return;
         }
 
