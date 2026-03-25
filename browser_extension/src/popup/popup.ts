@@ -93,7 +93,7 @@ const fieldMappingChoices: Record<number, string> = {};
 function showPairStatus(paired: boolean) {
   if (!pairStatus) return;
   pairStatus.textContent = paired ? "Spárováno s HypoManagerem" : "Není spárováno";
-  pairStatus.className = paired ? "status ok" : "status warn";
+  pairStatus.className = paired ? "status-chip ok" : "status-chip warn";
 }
 
 function showAdminLockStatus(text: string) {
@@ -136,7 +136,7 @@ pairForm?.addEventListener("submit", async (e) => {
     pairCodeInput!.value = "";
   } else {
     pairStatus!.textContent = "Chyba: " + (res?.error ?? "neznámá");
-    pairStatus!.className = "status error";
+    pairStatus!.className = "status-chip error";
   }
 });
 
@@ -158,12 +158,14 @@ fillAllBtn?.addEventListener("click", async () => {
   const res = await chrome.runtime.sendMessage({ type: "FILL_ALL" });
   if (res?.ok && res.result) {
     const r = res.result;
-    const lines = [
-      `Vyplněno: ${r.filled?.length ?? 0}`,
-      `Nenalezeno: ${r.missing?.length ?? 0}`,
-      `Chyby: ${r.errors?.length ?? 0}`,
-    ];
-    fillReport.textContent = lines.join("\n");
+    const filled = r.filled?.length ?? 0;
+    const missing = r.missing?.length ?? 0;
+    const errors = r.errors?.length ?? 0;
+    fillReport.innerHTML = [
+      `<strong>Vyplněno:</strong> ${filled}`,
+      `<strong>Nenalezeno:</strong> ${missing}`,
+      `<strong>Chyby:</strong> ${errors}`,
+    ].join(" · ");
   } else {
     fillReport.textContent = "Chyba: " + (res?.error ?? "neznámá");
   }

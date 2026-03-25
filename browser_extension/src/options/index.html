@@ -5,31 +5,141 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Nastavení – HypoManager Autofill</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
-    h1 { font-size: 1.25rem; }
-    label { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0; cursor: pointer; }
-    input[type="checkbox"] { width: 1.25rem; height: 1.25rem; }
-    .hint { font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; }
+    body {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      background: #f3f4f7;
+      margin: 0;
+      color: #111827;
+    }
+    .container {
+      max-width: 620px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin: 0 0 .5rem 0;
+    }
+    .subtitle {
+      margin: 0 0 1.25rem 0;
+      color: #6b7280;
+      font-size: .95rem;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 1rem;
+      margin-bottom: .9rem;
+    }
+    .card h2 {
+      margin: 0 0 .75rem 0;
+      font-size: 1.02rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: .45rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: .7rem .75rem;
+      font-size: .92rem;
+      margin-bottom: .35rem;
+    }
+    input[type="text"]:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px #dbeafe;
+      outline: none;
+    }
+    .hint {
+      font-size: .82rem;
+      color: #6b7280;
+      margin: .2rem 0 0 0;
+      line-height: 1.45;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+    }
+    .status {
+      margin-top: .55rem;
+      font-size: .82rem;
+      padding: .4rem .55rem;
+      border-radius: 9px;
+      border: 1px solid transparent;
+      display: none;
+    }
+    .status.show { display: block; }
+    .status.valid { background: #ecfdf3; color: #067647; border-color: #a6f4c5; }
+    .status.invalid { background: #fef3f2; color: #b42318; border-color: #fecdca; }
+    .switch {
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      border: none;
+      background: #cbd5e1;
+      position: relative;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .switch::after {
+      content: "";
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      left: 2px;
+      top: 2px;
+      transition: .15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,.2);
+    }
+    .switch.on { background: #2563eb; }
+    .switch.on::after { transform: translateX(20px); }
+    .switch-label {
+      font-size: .93rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    .switch-sub {
+      margin: .2rem 0 0 0;
+      font-size: .82rem;
+      color: #6b7280;
+    }
   </style>
 </head>
 <body>
-  <h1>Nastavení rozšíření</h1>
+  <main class="container">
+    <h1>Nastavení rozšíření</h1>
+    <p class="subtitle">HypoManager Bank Autofill</p>
 
-  <label style="display: block; margin-bottom: 0.5rem;">
-    <strong>URL API HypoManageru</strong>
-  </label>
-  <input type="text" id="api-base-url" placeholder="https://vase-api.up.railway.app" style="width: 100%; padding: 0.5rem; margin-bottom: 0.25rem; box-sizing: border-box;" />
-  <p class="hint">Pro vývoj nech prázdné nebo nastav <code>http://localhost:4000</code>. V produkci zadej adresu API (např. z Railway). Bez správné URL nebude spárování fungovat.</p>
+    <section class="card">
+      <h2>URL API HypoManageru</h2>
+      <label for="api-base-url">API endpoint</label>
+      <input type="text" id="api-base-url" placeholder="https://api.hypomanazer.cz" />
+      <p class="hint">Pro vývoj nech prázdné nebo nastav <code>http://localhost:4000</code>. V produkci zadej API adresu.</p>
+      <div id="api-url-status" class="status"></div>
+    </section>
 
-  <label>
-    <input type="checkbox" id="admin-mapping-tools" />
-    <span>Zobrazit nástroje pro správu mappingů (admin)</span>
-  </label>
-  <p class="hint">Po zapnutí se v popupu rozšíření zobrazí sekce „Procházet DOM“ – procházení stránky banky a export mapování polí do mapping packu.</p>
-
-  <p class="hint" style="margin-top: 0.5rem;">
-    Admin režim se odemyká jednorázovým kódem poslaným na e‑mail (není potřeba nic nastavovat).
-  </p>
+    <section class="card">
+      <h2>Správa mappingů</h2>
+      <div class="row">
+        <div>
+          <p class="switch-label">Zobrazit nástroje pro správu mappingů (admin)</p>
+          <p class="switch-sub">Po zapnutí se v popupu zobrazí sekce pro DOM scan, mapování a export.</p>
+        </div>
+        <button id="admin-mapping-switch" type="button" class="switch" aria-pressed="false" aria-label="Přepnout admin nástroje"></button>
+      </div>
+      <input type="checkbox" id="admin-mapping-tools" hidden />
+      <p class="hint">Admin režim se odemyká jednorázovým kódem poslaným na e‑mail.</p>
+    </section>
+  </main>
   <script src="options.js"></script>
 </body>
 </html>

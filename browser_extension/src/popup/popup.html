@@ -7,54 +7,59 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <h1>HypoManager Bank Autofill</h1>
+  <header class="topbar">
+    <h1>HypoManager Bank Autofill</h1>
+    <p id="pair-status" class="status-chip warn">Není spárováno</p>
+  </header>
 
-  <section>
-    <h2>Spárování</h2>
-    <p id="pair-status" class="status warn">—</p>
-    <form id="pair-form">
-      <input type="text" id="pair-code" placeholder="Kód (např. ABCD-EFGH)" autocomplete="off" />
-      <button type="submit">Spárovat</button>
-    </form>
-    <p class="hint">Kód získáš v HypoManageru v Nastavení → Integrace.</p>
-  </section>
+  <main class="content">
+    <section class="card">
+      <h2>Spárování</h2>
+      <form id="pair-form" class="stack">
+        <input type="text" id="pair-code" placeholder="Kód (např. ABCD-EFGH)" autocomplete="off" />
+        <button type="submit" class="btn primary">Spárovat</button>
+      </form>
+      <p class="hint">Kód získáš v HypoManageru v Nastavení → Integrace.</p>
+    </section>
 
-  <section>
-    <h2>Aktivní případ</h2>
-    <p id="case-info">—</p>
-    <button id="load-case">Načíst případ</button>
-  </section>
+    <section class="card">
+      <h2>Aktivní případ</h2>
+      <p id="case-info" class="info-box">—</p>
+      <button id="load-case" class="btn secondary">Načíst případ</button>
+    </section>
 
-  <section>
-    <h2>Vyplnit formulář</h2>
-    <p>Otevři stránku banky a klikni na „Vyplnit vše“.</p>
-    <button id="fill-all">Vyplnit vše</button>
-    <div id="fill-report"></div>
-  </section>
+    <section class="card">
+      <h2>Vyplnit formulář</h2>
+      <p class="hint">Otevři stránku banky a klikni na „Vyplnit vše“.</p>
+      <button id="fill-all" class="btn primary">Vyplnit vše</button>
+      <p class="shortcut-hint">Zkratka: <kbd>Ctrl+Shift+V</kbd></p>
+      <div id="fill-report" class="report-box"></div>
+    </section>
 
-  <section id="admin-mapping-section" class="admin-only" hidden>
-    <h2>Správa mappingů (admin)</h2>
-    <p class="hint">Otevři stránku banky v této záložce, pak klikni níže. Pole ze stránky namapuj a exportuj do mapping packu.</p>
+    <section id="admin-mapping-section" class="card admin-only" hidden>
+      <h2>Správa mappingů (admin)</h2>
+      <p class="hint">Otevři stránku banky v této záložce, pak klikni níže. Pole ze stránky namapuj a exportuj do mapping packu.</p>
     <div id="admin-lock" class="admin-lock">
-      <p class="hint" style="margin: 0 0 6px 0;">Admin režim se odemyká jednorázovým kódem poslaným na e‑mail.</p>
+      <p class="hint">Admin režim se odemyká jednorázovým kódem poslaným na e‑mail.</p>
       <div class="admin-lock-row">
-        <button id="admin-send-code-btn" type="button">Poslat kód</button>
+        <button id="admin-send-code-btn" type="button" class="btn secondary">Poslat kód</button>
         <input type="text" id="admin-otp-code" placeholder="Kód z e‑mailu (6 číslic)" inputmode="numeric" autocomplete="one-time-code" />
-        <button id="admin-verify-code-btn" type="button">Ověřit</button>
-        <button id="admin-lock-btn" type="button">Zamknout</button>
+        <button id="admin-verify-code-btn" type="button" class="btn primary">Ověřit</button>
+        <button id="admin-lock-btn" type="button" class="btn ghost">Zamknout</button>
       </div>
       <div id="admin-lock-status" class="hint"></div>
     </div>
-    <button id="dom-scan-btn">Procházet DOM na této stránce</button>
-    <div id="dom-scan-status"></div>
-    <div id="dom-mapping-list"></div>
-    <div class="mapping-actions">
-      <button id="export-mapping-btn" disabled>Exportovat mapping pack (JSON)</button>
-      <button id="send-mapping-btn" disabled>Odeslat mapping do HypoManageru</button>
-    </div>
-    <div id="send-mapping-status" class="send-status"></div>
-    <textarea id="export-output" readonly rows="6" class="export-output"></textarea>
-  </section>
+      <button id="dom-scan-btn" class="btn secondary">Procházet DOM na této stránce</button>
+      <div id="dom-scan-status" class="hint"></div>
+      <div id="dom-mapping-list" class="mapping-list"></div>
+      <div class="mapping-actions">
+        <button id="export-mapping-btn" class="btn secondary" disabled>Exportovat mapping pack (JSON)</button>
+        <button id="send-mapping-btn" class="btn primary" disabled>Odeslat mapping do HypoManageru</button>
+      </div>
+      <div id="send-mapping-status" class="send-status"></div>
+      <textarea id="export-output" readonly rows="6" class="export-output"></textarea>
+    </section>
+  </main>
 
   <script type="module" src="./popup.js"></script>
 </body>
