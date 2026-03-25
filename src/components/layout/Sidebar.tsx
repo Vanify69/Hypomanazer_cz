@@ -42,8 +42,8 @@ export function Sidebar({ embedded = false, onClose, activeCase }: SidebarProps)
 
   const content = (
     <>
-      <div className="border-b border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-center gap-3">
+      <div className="app-top-chrome-height border-b border-gray-200 dark:border-gray-700 px-4 flex items-center">
+        <div className="flex items-center gap-3 w-full">
           <div className="w-10 h-10 shrink-0 rounded-lg bg-blue-600 flex items-center justify-center">
             <FileText className="w-6 h-6 text-white" />
           </div>

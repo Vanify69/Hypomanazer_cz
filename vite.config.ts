@@ -1,10 +1,15 @@
-  import { defineConfig } from 'vite';
+  import { defineConfig, loadEnv } from 'vite';
   import react from '@vitejs/plugin-react-swc';
   import tailwindcss from '@tailwindcss/vite';
   import { VitePWA } from 'vite-plugin-pwa';
   import path from 'path';
 
-  export default defineConfig({
+  export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  /** Musí odpovídat PORT v server/.env (výchozí 4000). Při jiném portu: VITE_API_PROXY_TARGET=http://127.0.0.1:XXXX v .env.development.local */
+  const apiProxyTarget = env.VITE_API_PROXY_TARGET?.trim() || 'http://127.0.0.1:4000';
+
+  return {
     test: {
       environment: 'jsdom',
       globals: true,
@@ -18,9 +23,9 @@
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg'],
         manifest: {
-          name: 'Hypo – zprostředkovatel hypoték',
-          short_name: 'Hypo',
-          description: 'Aplikace pro zprostředkovatele hypotéčních úvěrů',
+          name: 'HypoManažer - hypoteční CRM',
+          short_name: 'HypoManažer',
+          description: 'HypoManažer - hypoteční CRM',
           theme_color: '#030213',
           background_color: '#ffffff',
           display: 'standalone',
@@ -37,6 +42,8 @@
           navigateFallback: '/index.html',
           runtimeCaching: [{ urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'google-fonts-cache' } }],
         },
+        /* Jinak SW v dev často rozbije /api → „Nelze se připojit k serveru“ i při běžícím backendu */
+        devOptions: { enabled: false },
       }),
     ],
     resolve: {
@@ -92,7 +99,7 @@
       open: true,
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:4000',
+          target: apiProxyTarget,
           changeOrigin: true,
           configure: (proxy) => {
             let lastLog = 0;
@@ -100,7 +107,9 @@
               if (res && !res.headersSent && (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET')) {
                 const now = Date.now();
                 if (now - lastLog > 60000) {
-                  console.warn('[vite] API backend nedostupný (127.0.0.1:4000). Spusťte: cd server && npm run dev');
+                  console.warn(
+                    `[vite] API backend nedostupný (${apiProxyTarget}). Spusťte: cd server && npm run dev (PORT musí sedět s proxy).`
+                  );
                   lastLog = now;
                 }
                 res.writeHead(502, { 'Content-Type': 'application/json' });
@@ -111,4 +120,5 @@
         },
       },
     },
+  };
   });

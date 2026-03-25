@@ -13,6 +13,34 @@ const DOC_TYPE_TO_CASE_FILE_TYPE: Record<DocType, string> = {
   OTHER: "vypisy",
 };
 
+function roleStr(role: unknown): string {
+  return typeof role === "string" ? role : String(role ?? "");
+}
+
+/** Spolužadatel: nahrané soubory v CO_APPLICANT slotech, nebo flag v metadatech (submit vždy ukládá hasCoApplicant). */
+function wantsCoApplicantPerson(session: {
+  uploadSlots: { personRole: unknown; status: string; storageKey: string | null }[];
+  intakeMetadata: string | null;
+}): boolean {
+  const uploadedCo = session.uploadSlots.some(
+    (s) =>
+      roleStr(s.personRole) === "CO_APPLICANT" &&
+      s.status === "UPLOADED" &&
+      Boolean(s.storageKey)
+  );
+  if (uploadedCo) return true;
+  if (!session.intakeMetadata?.trim()) return false;
+  try {
+    const m = JSON.parse(session.intakeMetadata) as Record<string, unknown>;
+    if (m.hasCoApplicant === true) return true;
+    const rel = m.coApplicantRelation;
+    if (rel != null && String(rel).trim() !== "") return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
 /**
  * Zkonvertuje lead na případ: vytvoří Case, Person(s), zkopíruje soubory do CaseFile a Document.
  * Extrakci (OP/DP/výpisy) lze spustit z UI případu nebo později přes job.
@@ -68,10 +96,7 @@ export async function convertLeadToCase(intakeSessionId: string): Promise<{ case
     },
   });
 
-  const hasCoApplicantFiles = session.uploadSlots.some(
-    (s) => s.personRole === "CO_APPLICANT" && s.status === "UPLOADED" && s.storageKey
-  );
-  if (hasCoApplicantFiles) {
+  if (wantsCoApplicantPerson(session)) {
     await prisma.person.create({
       data: {
         caseId,

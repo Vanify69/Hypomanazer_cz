@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Keyboard, FolderOpen, FileSpreadsheet, Puzzle, Sun, Moon, Monitor } from 'lucide-react';
+import { Keyboard, FolderOpen, FileSpreadsheet, Puzzle, Sun, Moon, Monitor, ExternalLink } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { shortcuts } from '../lib/mockData';
 import { apiRequest } from '../lib/api';
@@ -14,6 +14,7 @@ export function Settings() {
   const [pairingExpiresAt, setPairingExpiresAt] = useState<string | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
   const [pairingError, setPairingError] = useState<string | null>(null);
+  const [showExtensionInstallHelp, setShowExtensionInstallHelp] = useState(false);
 
   async function handleGeneratePairingCode() {
     setPairingLoading(true);
@@ -109,6 +110,41 @@ export function Settings() {
               </p>
             </div>
             <div className="p-6 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowExtensionInstallHelp((v) => !v)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  {showExtensionInstallHelp ? 'Skrýt instalaci' : 'Instalace do Chrome'}
+                </button>
+                <a
+                  href="https://github.com/Vanify69/Hypomanazer_cz/tree/master/browser_extension#na%C4%8Dten%C3%AD-v-chrome"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Otevřít návod
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+
+              {showExtensionInstallHelp && (
+                <div className="text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-2">
+                  <p className="font-medium">Instalace rozšíření (Chrome / Edge)</p>
+                  <ol className="list-decimal pl-5 space-y-1">
+                    <li>V prohlížeči otevři <code className="text-xs bg-white/70 dark:bg-gray-800/60 px-1 rounded">chrome://extensions</code></li>
+                    <li>Zapni <strong>Vývojářský režim</strong></li>
+                    <li>Klikni <strong>Načíst rozbalené</strong> a vyber složku <code className="text-xs bg-white/70 dark:bg-gray-800/60 px-1 rounded">browser_extension/dist</code></li>
+                    <li>V rozšíření pak použij kód níže („Vygenerovat kód“) pro spárování</li>
+                  </ol>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Poznámka: Web neumí rozšíření nainstalovat automaticky. Tohle je nejrychlejší způsob v režimu vývoje.
+                    (Později lze publikovat do Chrome Web Store.)
+                  </p>
+                </div>
+              )}
+
               {pairingError && (
                 <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-3 py-2 rounded-lg">{pairingError}</p>
               )}

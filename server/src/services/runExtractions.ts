@@ -232,18 +232,21 @@ export async function runExtractionsForCase(caseId: string): Promise<void> {
       status: "data-vytazena",
     },
   });
+  /** APPLICANT před CO_APPLICANT – sedí s personIndex 0 / 1 z OP extrakce. */
   const persons = await prisma.person.findMany({
     where: { caseId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { role: "asc" },
   });
   for (let i = 0; i < persons.length && i < allExtracted.length; i++) {
     const ex = allExtracted[i];
     if (!ex || (!ex.jmeno?.trim() && !ex.prijmeni?.trim())) continue;
+    const p = persons[i];
+    if (!p) continue;
     await prisma.person.update({
-      where: { id: persons[i].id },
+      where: { id: p.id },
       data: {
-        firstName: ex.jmeno?.trim() || persons[i].firstName,
-        lastName: ex.prijmeni?.trim() || persons[i].lastName,
+        firstName: ex.jmeno?.trim() || p.firstName,
+        lastName: ex.prijmeni?.trim() || p.lastName,
       },
     });
   }

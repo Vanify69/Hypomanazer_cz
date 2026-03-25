@@ -300,16 +300,14 @@ router.post("/:token/submit", async (req: Request, res: Response) => {
     return;
   }
 
-  const intakeMetadata =
-    body.household !== undefined ||
-    body.coApplicantRelation !== undefined ||
-    body.poznamka !== undefined
-      ? JSON.stringify({
-          coApplicantRelation: body.coApplicantRelation ?? null,
-          household: body.household ?? null,
-          poznamka: body.poznamka ?? null,
-        })
-      : undefined;
+  /** Vždy uložit hasCoApplicant – convertLeadToCase podle toho založí druhou osobu (dřív bez kroku „Ostatní“ metadata chyběla). */
+  const intakeMeta: Record<string, unknown> = {
+    hasCoApplicant: Boolean(body.hasCoApplicant),
+  };
+  if (body.coApplicantRelation !== undefined) intakeMeta.coApplicantRelation = body.coApplicantRelation ?? null;
+  if (body.household !== undefined) intakeMeta.household = body.household ?? null;
+  if (body.poznamka !== undefined) intakeMeta.poznamka = body.poznamka ?? null;
+  const intakeMetadata = JSON.stringify(intakeMeta);
 
   const now = new Date();
   const mainIcoValid = needsMainIco && /^\d{8}$/.test(mainIcoTrim) ? mainIcoTrim : undefined;
@@ -321,7 +319,7 @@ router.post("/:token/submit", async (req: Request, res: Response) => {
       consentAt: now,
       consentVersion: "v1",
       state: IntakeSessionState.SUBMITTED,
-      ...(intakeMetadata !== undefined ? { intakeMetadata } : {}),
+      intakeMetadata,
       ...(mainIcoValid !== undefined ? { ico: mainIcoValid } : {}),
       ...(coIcoValid !== undefined ? { coApplicantIco: coIcoValid } : {}),
     },

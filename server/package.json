@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node scripts/select-schema.js && prisma generate && tsx watch src/index.ts",
     "dev:all": "cd .. && npm run dev:all",
-    "dev:worker": "tsx watch src/worker.ts",
+    "dev:worker": "node scripts/select-schema.js && prisma generate && tsx watch src/worker.ts",
     "build": "node scripts/select-schema.js && prisma generate && npm run test && tsc",
     "test": "node --import tsx --test src/lib/tokens.test.ts src/lib/referrerStatus.test.ts src/lib/intakeValidation.test.ts src/modules/bankCalculators/excelMapping.test.ts",
     "start": "sh scripts/start.sh",

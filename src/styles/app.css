@@ -5,6 +5,8 @@
 :root {
   --app-chrome-top-bg: rgba(255, 255, 255, 0.94);
   --app-chrome-top-border: rgba(0, 0, 0, 0.1);
+  /* Výška horní lišty (TopBar) a hlavičky sidebaru na desktopu pro symetrii dělení. */
+  --app-top-chrome-height: 92px;
   --dash-surface: var(--muted);
   --dash-card: var(--card);
   --dash-card-border: var(--border);
@@ -32,10 +34,16 @@
   top: 0;
   z-index: 20;
   flex-shrink: 0;
+  height: var(--app-top-chrome-height);
   background-color: var(--app-chrome-top-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--app-chrome-top-border);
+}
+
+/* Sdílená výška horních bloků (TopBar + sidebar header). */
+.app-top-chrome-height {
+  height: var(--app-top-chrome-height);
 }
 
 .app-sidebar-sticky-desktop {

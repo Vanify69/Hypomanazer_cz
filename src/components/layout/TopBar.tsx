@@ -6,7 +6,7 @@ import { MARKETING_BANK_RATES } from './bankRates';
  */
 export function TopBar() {
   return (
-    <div className="px-3 py-2 sm:px-4 sm:py-2.5">
+    <div className="h-full px-3 py-2 sm:px-4 sm:py-2.5 flex items-center">
       <div className="mx-auto flex w-full max-w-7xl justify-end">
         <div className="flex min-w-0 flex-col items-end gap-1">
           <div className="flex min-w-0 items-center gap-4">
