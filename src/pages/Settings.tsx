@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Keyboard, FolderOpen, FileSpreadsheet, Puzzle, Sun, Moon, Monitor, ExternalLink } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { shortcuts } from '../lib/mockData';
-import { apiRequest } from '../lib/api';
+import { API_BASE, apiRequest } from '../lib/api';
 import { GoogleCalendarCard } from '../components/settings/GoogleCalendarCard';
 import { BankCalculatorsSettingsSection } from '../components/bankCalculators/BankTemplateSettingsCard';
 
@@ -15,6 +15,10 @@ export function Settings() {
   const [pairingLoading, setPairingLoading] = useState(false);
   const [pairingError, setPairingError] = useState<string | null>(null);
   const [showExtensionInstallHelp, setShowExtensionInstallHelp] = useState(false);
+  const [extensionApiCopied, setExtensionApiCopied] = useState(false);
+
+  const extensionZipUrl = `${API_BASE || ''}/downloads/hypomanager-bank-autofill.zip`;
+  const extensionApiUrl = API_BASE || '';
 
   async function handleGeneratePairingCode() {
     setPairingLoading(true);
@@ -135,9 +139,55 @@ export function Settings() {
                   <ol className="list-decimal pl-5 space-y-1">
                     <li>V prohlížeči otevři <code className="text-xs bg-white/70 dark:bg-gray-800/60 px-1 rounded">chrome://extensions</code></li>
                     <li>Zapni <strong>Vývojářský režim</strong></li>
-                    <li>Klikni <strong>Načíst rozbalené</strong> a vyber složku <code className="text-xs bg-white/70 dark:bg-gray-800/60 px-1 rounded">browser_extension/dist</code></li>
+                    <li>
+                      Stáhni ZIP a rozbal ho (doporučeno)
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <a
+                          href={extensionZipUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                        >
+                          Stáhnout rozšíření (ZIP)
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
+                        Po rozbalení budeš mít složku <code className="text-xs bg-white/70 dark:bg-gray-800/60 px-1 rounded">dist</code>.
+                      </p>
+                    </li>
+                    <li>Klikni <strong>Načíst rozbalené</strong> a vyber složku <code className="text-xs bg-white/70 dark:bg-gray-800/60 px-1 rounded">dist</code></li>
                     <li>V rozšíření pak použij kód níže („Vygenerovat kód“) pro spárování</li>
                   </ol>
+                  <div className="pt-2">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">API adresa pro rozšíření (produkce)</p>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        readOnly
+                        value={extensionApiUrl}
+                        className="flex-1 px-2 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white/70 dark:bg-gray-800/60 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(extensionApiUrl);
+                            setExtensionApiCopied(true);
+                            setTimeout(() => setExtensionApiCopied(false), 1500);
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        {extensionApiCopied ? 'Zkopírováno' : 'Kopírovat'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                      V rozšíření otevři <strong>Možnosti</strong> a vlož do „URL API HypoManageru“. Pak půjde spárování i mimo localhost.
+                    </p>
+                  </div>
                   <p className="text-xs text-gray-600 dark:text-gray-300">
                     Poznámka: Web neumí rozšíření nainstalovat automaticky. Tohle je nejrychlejší způsob v režimu vývoje.
                     (Později lze publikovat do Chrome Web Store.)
