@@ -156,6 +156,7 @@ model User {
   browserExtensionPairings BrowserExtensionPairing[]
   browserExtensionDevices   BrowserExtensionDevice[]
   browserExtensionMappings  BrowserExtensionMapping[]
+  browserExtensionAdminOtps BrowserExtensionAdminOtp[]
   calendarEvents            CalendarEvent[] @relation("CalendarEvents")
   googleOAuthToken          GoogleOAuthToken?
   bankTemplates             BankTemplate[]
@@ -488,4 +489,18 @@ model BrowserExtensionMapping {
   updatedAt  DateTime @updatedAt
 
   @@unique([userId, hostname, pathPrefix])
+}
+
+// Jednorázové kódy pro odemčení "admin" nástrojů v rozšíření (bez ukládání hesla).
+model BrowserExtensionAdminOtp {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }
