@@ -157,6 +157,9 @@ export async function mergeDoctlyIdExtractedData(
   });
 
   const rawJson = JSON.stringify(idJson);
+  const existingDoc = normalizeDocNumber(existing?.cisloDokladu ?? null);
+  const incomingDoc = normalizeDocNumber(idJson.document.documentNumber);
+  const cisloDokladu = resolvePreferredDocumentNumber(existingDoc, incomingDoc);
   const data = {
     jmeno: idJson.holder.givenNames ?? existing?.jmeno ?? "",
     prijmeni: idJson.holder.surname ?? existing?.prijmeni ?? "",
@@ -169,7 +172,7 @@ export async function mergeDoctlyIdExtractedData(
     pohlavi: sexToUiValue(idJson.holder.sex) ?? existing?.pohlavi ?? null,
     narodnost: idJson.holder.nationality ?? existing?.narodnost ?? null,
     rodinnyStav: existing?.rodinnyStav ?? null,
-    cisloDokladu: idJson.document.documentNumber ?? existing?.cisloDokladu ?? null,
+    cisloDokladu,
     datumVydani: isoDateToCzDate(idJson.document.dateOfIssue) ?? existing?.datumVydani ?? null,
     platnostDo: isoDateToCzDate(idJson.document.dateOfExpiry) ?? existing?.platnostDo ?? null,
     vydavajiciUrad: idJson.document.issuedBy ?? existing?.vydavajiciUrad ?? null,
@@ -186,6 +189,35 @@ export async function mergeDoctlyIdExtractedData(
       data: { caseId, personIndex, ...data },
     });
   }
+}
+
+function normalizeDocNumber(v: string | null | undefined): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim().replace(/\s+/g, "");
+  return t.length ? t : null;
+}
+
+/**
+ * Povolené tvary pro OP:
+ * - CZ: 9 číslic (např. 212304135)
+ * - SK: 2 písmena + 6 číslic (např. JH022198)
+ */
+function isLikelyValidDocumentNumber(v: string | null): boolean {
+  if (!v) return false;
+  return /^\d{9}$/.test(v) || /^[A-Z]{2}\d{6}$/i.test(v);
+}
+
+/**
+ * Preferuje již uložené validní číslo dokladu před novým payloadem,
+ * aby zadní strana / OCR artefakt nepřepsaly správnou hodnotu z přední strany.
+ */
+function resolvePreferredDocumentNumber(existing: string | null, incoming: string | null): string | null {
+  const existingValid = isLikelyValidDocumentNumber(existing);
+  const incomingValid = isLikelyValidDocumentNumber(incoming);
+  if (existingValid && !incomingValid) return existing;
+  if (existingValid && incomingValid && existing !== incoming) return existing;
+  if (!existingValid && incomingValid) return incoming;
+  return incoming ?? existing ?? null;
 }
 
 /**
