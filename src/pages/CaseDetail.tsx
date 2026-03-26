@@ -25,13 +25,21 @@ import {
   Calendar,
 } from 'lucide-react';
 import { getCase, saveCase, setActiveCase, deleteCase, patchCaseStatus, uploadCaseFile, deleteCaseFile, reparseDpFromStoredOutput, parseDpFromRawText, reparseOpFromStoredOutput, reparseVypisyFromStoredOutput } from '../lib/storage';
+import { API_BASE } from '../lib/api';
 import { Case, DpData, VypisyPrijmy, Applicant, ExtractedData, UploadedFile, getDpLines, getDpBasic, type DealStatus } from '../lib/types';
 import { StatusBadge } from '../components/cases/StatusBadge';
 import { ApplicantPanels } from '../components/cases/ApplicantPanels';
 import { ApplicantUploadModal } from '../components/modals/ApplicantUploadModal';
 import { AddCoApplicantModal } from '../components/modals/AddCoApplicantModal';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
-import { SimpleModal } from '../components/modals/SimpleModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { CaseCalendarTab } from '../components/cases/CaseCalendarTab';
 import { CaseBankCalculatorsPanel } from '../components/bankCalculators/CaseBankCalculatorsPanel';
 
@@ -466,6 +474,11 @@ export function CaseDetail() {
     setReuploadSelectedFile(null);
     setReuploadError(null);
     setReuploadModalOpen(true);
+  };
+
+  const handleViewFile = (file: UploadedFile) => {
+    if (!file.url) return;
+    window.open(`${API_BASE}${file.url}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleRunReupload = async (extract: boolean) => {
@@ -1464,9 +1477,9 @@ export function CaseDetail() {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleOpenReuploadModal(file)}
+                            onClick={() => handleViewFile(file)}
                             className="doc-file-btn doc-file-btn-zobrazit"
-                            title="Zobrazit (nové nahrání)"
+                            title="Zobrazit"
                           >
                             <Eye className="w-4 h-4" />
                             Zobrazit
@@ -1578,33 +1591,43 @@ export function CaseDetail() {
         />
       )}
 
-      <SimpleModal
+      <Dialog
         open={reuploadModalOpen}
-        onClose={() => {
-          if (reuploadSubmitting) return;
-          setReuploadModalOpen(false);
-          setReuploadTargetFile(null);
-          setReuploadSelectedFile(null);
-          setReuploadError(null);
+        onOpenChange={(open) => {
+          if (!open && reuploadSubmitting) return;
+          if (!open) {
+            setReuploadModalOpen(false);
+            setReuploadTargetFile(null);
+            setReuploadSelectedFile(null);
+            setReuploadError(null);
+          } else {
+            setReuploadModalOpen(true);
+          }
         }}
-        title="Nahrát nový soubor"
       >
-        <div className="space-y-3">
-          <p className="text-sm text-gray-600">
-            {reuploadTargetFile ? `Typ: ${fileTypeLabels[reuploadTargetFile.type]} | Původní: ${reuploadTargetFile.name}` : ''}
-          </p>
-          <input
-            type="file"
-            accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.gif"
-            onChange={(e) => setReuploadSelectedFile(e.target.files?.[0] ?? null)}
-            disabled={reuploadSubmitting}
-            className="block w-full text-sm"
-          />
-          {reuploadSelectedFile && (
-            <p className="text-xs text-gray-500">Vybraný soubor: {reuploadSelectedFile.name}</p>
-          )}
-          {reuploadError && <p className="text-sm text-red-600">{reuploadError}</p>}
-          <div className="flex items-center justify-end gap-2 pt-2">
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nahrát nový soubor</DialogTitle>
+            <DialogDescription>
+              {reuploadTargetFile
+                ? `Typ: ${fileTypeLabels[reuploadTargetFile.type]} | Původní: ${reuploadTargetFile.name}`
+                : 'Vyberte nový soubor pro přehrání dokumentu.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <input
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.gif"
+              onChange={(e) => setReuploadSelectedFile(e.target.files?.[0] ?? null)}
+              disabled={reuploadSubmitting}
+              className="block w-full text-sm text-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1.5 file:text-sm file:text-foreground"
+            />
+            {reuploadSelectedFile && (
+              <p className="text-xs text-muted-foreground">Vybraný soubor: {reuploadSelectedFile.name}</p>
+            )}
+            {reuploadError && <p className="text-sm text-red-500">{reuploadError}</p>}
+          </div>
+          <DialogFooter>
             <button
               type="button"
               onClick={() => {
@@ -1614,7 +1637,7 @@ export function CaseDetail() {
                 setReuploadError(null);
               }}
               disabled={reuploadSubmitting}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-md"
+              className="px-3 py-2 text-sm border border-border rounded-md text-foreground"
             >
               Zrušit
             </button>
@@ -1622,7 +1645,7 @@ export function CaseDetail() {
               type="button"
               onClick={() => void handleRunReupload(false)}
               disabled={!reuploadSelectedFile || reuploadSubmitting}
-              className="px-3 py-2 text-sm border border-blue-300 text-blue-700 rounded-md disabled:opacity-50"
+              className="px-3 py-2 text-sm border border-blue-400 text-blue-500 rounded-md disabled:opacity-50"
             >
               Nahrát a uložit
             </button>
@@ -1634,9 +1657,9 @@ export function CaseDetail() {
             >
               Nahrát a extrahovat
             </button>
-          </div>
-        </div>
-      </SimpleModal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
