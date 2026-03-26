@@ -24,7 +24,7 @@ import {
   FileStack,
   Calendar,
 } from 'lucide-react';
-import { getCase, saveCase, setActiveCase, deleteCase, patchCaseStatus, uploadCaseFile, deleteCaseFile, reparseDpFromStoredOutput, parseDpFromRawText, reparseOpFromStoredOutput, reparseVypisyFromStoredOutput } from '../lib/storage';
+import { getCase, saveCase, setActiveCase, deleteCase, patchCaseStatus, uploadCaseFile, deleteCaseFile, reparseDpFromStoredOutput, parseDpFromRawText, reparseOpFromStoredOutput, reparseVypisyFromStoredOutput, enrichDpFromAres } from '../lib/storage';
 import { API_BASE } from '../lib/api';
 import { Case, DpData, VypisyPrijmy, Applicant, ExtractedData, UploadedFile, getDpLines, getDpBasic, type DealStatus } from '../lib/types';
 import { StatusBadge } from '../components/cases/StatusBadge';
@@ -544,7 +544,14 @@ export function CaseDetail() {
       setDpUploadError(null);
       setDpUploading(true);
       const updated = await uploadCaseFile(caseData.id, file, 'danove', activeRealApplicant.id);
-      setCaseData(updated);
+      const personIndex = Math.max(0, (activeRealApplicant.order ?? 1) - 1);
+      let enriched = updated;
+      try {
+        enriched = await enrichDpFromAres(caseData.id, activeRealApplicant.id, personIndex);
+      } catch {
+        // ARES je best-effort – když není DIČ/IČ nebo ARES nedostupný, necháme aspoň načtená DP data
+      }
+      setCaseData(enriched);
       setDpHideEmptyRows(true);
     } catch (err) {
       setDpUploadError(err instanceof Error ? err.message : 'Nahrání DP se nezdařilo.');
@@ -569,7 +576,13 @@ export function CaseDetail() {
       setDpReparsing(true);
       const personIndex = Math.max(0, (activeRealApplicant.order ?? 1) - 1);
       const updated = await reparseDpFromStoredOutput(caseData.id, activeRealApplicant.id, personIndex);
-      setCaseData(updated);
+      let enriched = updated;
+      try {
+        enriched = await enrichDpFromAres(caseData.id, activeRealApplicant.id, personIndex);
+      } catch {
+        // ARES best-effort
+      }
+      setCaseData(enriched);
     } catch (err) {
       setDpUploadError(err instanceof Error ? err.message : 'Znovunačtení DP selhalo.');
     } finally {
@@ -584,7 +597,13 @@ export function CaseDetail() {
       setDpParsingRaw(true);
       const personIndex = Math.max(0, (activeRealApplicant.order ?? 1) - 1);
       const updated = await parseDpFromRawText(caseData.id, dpRawText.trim(), activeRealApplicant.id, personIndex);
-      setCaseData(updated);
+      let enriched = updated;
+      try {
+        enriched = await enrichDpFromAres(caseData.id, activeRealApplicant.id, personIndex);
+      } catch {
+        // ARES best-effort
+      }
+      setCaseData(enriched);
       setDpRawText('');
       setDpShowRawInput(false);
     } catch (err) {
