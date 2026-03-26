@@ -480,9 +480,12 @@ export function CaseDetail() {
     if (!file.url) return;
     const url = `${API_BASE}${file.url}`;
     try {
-      const check = await fetch(url, { method: 'HEAD' });
-      if (check.ok) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+      const res = await fetch(url, { method: 'GET' });
+      if (res.ok) {
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
         return;
       }
     } catch {
