@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router';
 import {
   ArrowLeft,
@@ -80,6 +80,9 @@ export function Intake() {
   const [submitDone, setSubmitDone] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const [clearingSlot, setClearingSlot] = useState<string | null>(null);
+  /** Po prvním načtení slotů ze serveru – teprve pak volat /progress (jinak by se smazaly CO sloty dřív než hydratace hasCoApplicant). */
+  const [slotHydrated, setSlotHydrated] = useState(false);
+  const didHydrateCoFromSlotsRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -103,7 +106,28 @@ export function Intake() {
   }, [token]);
 
   useEffect(() => {
-    if (!token || loading) return;
+    setSlotHydrated(false);
+    didHydrateCoFromSlotsRef.current = false;
+  }, [token]);
+
+  useEffect(() => {
+    if (loading || !data?.uploadSlots) return;
+    if (data.state === 'SUBMITTED' || data.state === 'CONVERTED') {
+      setSlotHydrated(true);
+      return;
+    }
+    if (!didHydrateCoFromSlotsRef.current) {
+      if (data.uploadSlots.some((s) => s.personRole === 'CO_APPLICANT')) {
+        setHasCoApplicant(true);
+      }
+      didHydrateCoFromSlotsRef.current = true;
+    }
+    setSlotHydrated(true);
+  }, [loading, data]);
+
+  useEffect(() => {
+    if (!token || loading || !slotHydrated) return;
+    if (data?.state === 'SUBMITTED' || data?.state === 'CONVERTED') return;
     apiRequestPublic(`/api/intake/${token}/progress`, {
       method: 'POST',
       body: {
@@ -115,7 +139,7 @@ export function Intake() {
     })
       .then(() => refresh())
       .catch(() => {});
-  }, [token, loading, hasCoApplicant, mainIncome, coIncome, mainIco, refresh]);
+  }, [token, loading, slotHydrated, data?.state, hasCoApplicant, mainIncome, coIncome, mainIco, refresh]);
 
   const allSlots = data?.uploadSlots ?? [];
 

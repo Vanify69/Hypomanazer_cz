@@ -350,6 +350,7 @@ model ExtractedData {
   platnostDo      String?  // platnost OP do
   vydavajiciUrad  String?  // vydávající úřad
   opRawText       String?  // raw OCR/Doctly výstup – pro re-parse bez volání API
+  opDoctlyJson    String?  // raw JSON z Doctly ID extractoru
   datumNarozeni   String?  // datum narození – z OP nebo z rodného čísla
   mistoNarozeni   String?  // místo narození
   pohlavi         String?  // M/Ž nebo Muž/Žena – z OP nebo z rodného čísla

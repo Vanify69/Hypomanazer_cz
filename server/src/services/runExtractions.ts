@@ -4,11 +4,13 @@
  */
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { prisma } from "../lib/prisma.js";
-import { getCaseUploadDir, getUploadDir } from "../lib/upload.js";
-import { extractOnePersonFromOpTexts } from "../lib/extractOp.js";
+import { getUploadDir } from "../lib/upload.js";
+import { mergeDoctlyIdExtractedData } from "../lib/extractOp.js";
 import { getTextForClassification } from "../lib/classification.js";
-import { isImageFile, recognizeText } from "../lib/ocr.js";
+import { executeExtractorJson } from "../lib/doctly.js";
+import { parseDoctlyIdExtraction } from "../lib/doctlyId.js";
 import { extractDapFromFile, enrichParsedDapFromAres } from "../lib/extractDap.js";
 import {
   extractAccountHolderFromText,
@@ -46,6 +48,103 @@ function findPersonIndexByHolderName(
   return best != null && best.score >= 50 ? best.personIndex : null;
 }
 
+function roleToPersonIndex(role: string): number {
+  return role === "CO_APPLICANT" ? 1 : 0;
+}
+
+/** Stejný vzor jako convertLeadToCase: `ID_FRONT-APPLICANT-{cuid}.ext` */
+function parseIntakePathPersonIndex(normPath: string): number | null {
+  const base = path.basename(normPath.replace(/\\/g, "/"));
+  if (/-CO_APPLICANT-/.test(base)) return 1;
+  if (/-APPLICANT-/.test(base)) return 0;
+  return null;
+}
+
+function normPathKey(p: string): string {
+  return p.replace(/\\/g, "/");
+}
+
+/** Název souboru v Doctly podle Document (správná role i když diskový basename chybně obsahuje jen APPLICANT). */
+function doctlyUploadFilenameForCasePath(
+  casePathNorm: string,
+  docs: { id: string; storageKey: string; docType: string; personRole: string }[]
+): string | undefined {
+  const norm = normPathKey(casePathNorm);
+  const d = docs.find((x) => normPathKey(x.storageKey) === norm);
+  if (!d) return undefined;
+  const ext = path.extname(norm) || ".bin";
+  return `${d.docType}-${d.personRole}-${d.id}${ext}`;
+}
+
+type RecordLike = {
+  fileType: string;
+  ocrText: string;
+  filePath: string;
+  personIndex: number | null;
+  casePathNorm: string;
+};
+
+type OpWorkItem = {
+  filePath: string;
+  fileType: string;
+  personIndex: number | null;
+  casePathNorm: string;
+  doctlyName?: string;
+};
+
+function fileSha256Hex(filePath: string): string | null {
+  try {
+    return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Stejný binární soubor v slotu přední i zadní → jedno volání Doctly/OCR, text jednou.
+ * Název v Doctly: ID_FRONT_AND_BACK pokud jde o sloučení přední+zadní stejného PDF.
+ */
+async function extractUniqueOpJsonForPerson(items: OpWorkItem[]): Promise<unknown[]> {
+  if (items.length === 0) return [];
+  const slug = process.env.DOCTLY_ID_EXTRACTOR_SLUG?.trim();
+  if (!slug) return [];
+  const sorted = [...items].sort((a, b) => {
+    const pa = a.personIndex ?? 999;
+    const pb = b.personIndex ?? 999;
+    if (pa !== pb) return pa - pb;
+    if (a.fileType !== b.fileType) return a.fileType === "op-predni" ? -1 : 1;
+    return a.casePathNorm.localeCompare(b.casePathNorm);
+  });
+  const byHash = new Map<string, OpWorkItem[]>();
+  for (const it of sorted) {
+    const h = fileSha256Hex(it.filePath);
+    if (!h) continue;
+    if (!byHash.has(h)) byHash.set(h, []);
+    byHash.get(h)!.push(it);
+  }
+  const payloads: unknown[] = [];
+  for (const group of byHash.values()) {
+    const first = group[0];
+    const hasFront = group.some((x) => x.fileType === "op-predni");
+    const hasBack = group.some((x) => x.fileType === "op-zadni");
+    const frontItem = group.find((x) => x.fileType === "op-predni") ?? first;
+    let uploadName = frontItem.doctlyName;
+    if (hasFront && hasBack && uploadName) {
+      if (uploadName.includes("ID_FRONT")) {
+        uploadName = uploadName.replace("ID_FRONT", "ID_FRONT_AND_BACK");
+      } else if (uploadName.includes("ID_BACK")) {
+        uploadName = uploadName.replace("ID_BACK", "ID_FRONT_AND_BACK");
+      }
+    }
+    const extracted = await executeExtractorJson(first.filePath, {
+      slug,
+      uploadFilename: uploadName,
+    });
+    if (extracted) payloads.push(extracted);
+  }
+  return payloads;
+}
+
 export async function runExtractionsForCase(caseId: string): Promise<void> {
   const baseDir = getUploadDir();
   const caseFiles = await prisma.caseFile.findMany({
@@ -54,8 +153,15 @@ export async function runExtractionsForCase(caseId: string): Promise<void> {
   });
   if (caseFiles.length === 0) return;
 
-  type RecordLike = { fileType: string; ocrText: string; filePath: string };
+  const documents = await prisma.document.findMany({ where: { caseId } });
+  const docIdxByPath = new Map<string, number>();
+  for (const d of documents) {
+    const k = d.storageKey.replace(/\\/g, "/");
+    docIdxByPath.set(k, roleToPersonIndex(String(d.personRole)));
+  }
+
   const records: RecordLike[] = [];
+  const opWork: OpWorkItem[] = [];
 
   for (const f of caseFiles) {
     const pathParts = f.path.replace(/\\/g, "/").split("/").filter(Boolean);
@@ -63,18 +169,23 @@ export async function runExtractionsForCase(caseId: string): Promise<void> {
     if (!fs.existsSync(filePath)) {
       console.warn("[runExtractions] Soubor nenalezen:", filePath, "| CaseFile.path:", f.path);
     }
+    const normPath = f.path.replace(/\\/g, "/");
+    let personIndex: number | null = docIdxByPath.get(normPath) ?? null;
+    if (personIndex === null) {
+      personIndex = parseIntakePathPersonIndex(normPath);
+    }
+
+    const doctlyName = doctlyUploadFilenameForCasePath(normPath, documents);
+
     let ocrText = "";
     if (f.type === "op-predni" || f.type === "op-zadni") {
-      try {
-        if (isImageFile(filePath)) {
-          ocrText = await recognizeText(filePath);
-        } else {
-          ocrText = await getTextForClassification(filePath);
-        }
-      } catch (err) {
-        console.warn("[runExtractions] OCR/klasifikace selhala pro", filePath, err);
-        ocrText = "";
-      }
+      opWork.push({
+        filePath,
+        fileType: f.type,
+        personIndex,
+        casePathNorm: normPath,
+        doctlyName: doctlyName ?? undefined,
+      });
     } else {
       try {
         ocrText = await getTextForClassification(filePath);
@@ -82,20 +193,63 @@ export async function runExtractionsForCase(caseId: string): Promise<void> {
         ocrText = "";
       }
     }
-    records.push({ fileType: f.type, ocrText, filePath });
+    records.push({ fileType: f.type, ocrText, filePath, personIndex, casePathNorm: normPath });
   }
 
-  const predniIndices = records.map((r, i) => (r.fileType === "op-predni" ? i : -1)).filter((i) => i >= 0);
-  const zadniIndices = records.map((r, i) => (r.fileType === "op-zadni" ? i : -1)).filter((i) => i >= 0);
-  const numPersons = Math.max(predniIndices.length, zadniIndices.length, 1);
-  for (let personIndex = 0; personIndex < numPersons; personIndex++) {
-    const texts: string[] = [];
-    if (predniIndices[personIndex] !== undefined) texts.push(records[predniIndices[personIndex]].ocrText);
-    if (zadniIndices[personIndex] !== undefined) texts.push(records[zadniIndices[personIndex]].ocrText);
-    const combined = texts.filter(Boolean).join("\n\n");
-    if (!combined.trim()) continue;
+  const byMappedPerson = new Map<number, OpWorkItem[]>();
+  for (const o of opWork) {
+    if (o.personIndex === null) continue;
+    if (!byMappedPerson.has(o.personIndex)) byMappedPerson.set(o.personIndex, []);
+    byMappedPerson.get(o.personIndex)!.push(o);
+  }
+  for (const personIndex of Array.from(byMappedPerson.keys()).sort((a, b) => a - b)) {
+    const items = byMappedPerson.get(personIndex)!;
+    const payloads = await extractUniqueOpJsonForPerson(items);
+    if (!payloads.length) continue;
     try {
-      await extractOnePersonFromOpTexts(combined, caseId, personIndex);
+      for (const payload of payloads) {
+        const parsed = parseDoctlyIdExtraction(payload);
+        if (!parsed) continue;
+        await mergeDoctlyIdExtractedData(caseId, parsed, personIndex);
+      }
+    } catch {
+      /* log and continue */
+    }
+  }
+
+  const predniIndices = records.map((r, i) => (r.fileType === "op-predni" && r.personIndex === null ? i : -1)).filter((i) => i >= 0);
+  const zadniIndices = records.map((r, i) => (r.fileType === "op-zadni" && r.personIndex === null ? i : -1)).filter((i) => i >= 0);
+  const numPersonsLegacy = Math.max(predniIndices.length, zadniIndices.length, 1);
+  for (let personIndex = 0; personIndex < numPersonsLegacy; personIndex++) {
+    const legacyItems: OpWorkItem[] = [];
+    if (predniIndices[personIndex] !== undefined) {
+      const r = records[predniIndices[personIndex]];
+      legacyItems.push({
+        filePath: r.filePath,
+        fileType: "op-predni",
+        personIndex: null,
+        casePathNorm: r.casePathNorm,
+        doctlyName: doctlyUploadFilenameForCasePath(r.casePathNorm, documents),
+      });
+    }
+    if (zadniIndices[personIndex] !== undefined) {
+      const r = records[zadniIndices[personIndex]];
+      legacyItems.push({
+        filePath: r.filePath,
+        fileType: "op-zadni",
+        personIndex: null,
+        casePathNorm: r.casePathNorm,
+        doctlyName: doctlyUploadFilenameForCasePath(r.casePathNorm, documents),
+      });
+    }
+    const payloads = await extractUniqueOpJsonForPerson(legacyItems);
+    if (!payloads.length) continue;
+    try {
+      for (const payload of payloads) {
+        const parsed = parseDoctlyIdExtraction(payload);
+        if (!parsed) continue;
+        await mergeDoctlyIdExtractedData(caseId, parsed, personIndex);
+      }
     } catch {
       /* log and continue */
     }
@@ -125,11 +279,17 @@ export async function runExtractionsForCase(caseId: string): Promise<void> {
   }
 
   const danoveIndices = records.map((r, i) => (r.fileType === "danove" ? i : -1)).filter((i) => i >= 0);
-  for (let di = 0; di < danoveIndices.length; di++) {
-    const personIndex = di;
-    const filePath = records[danoveIndices[di]].filePath;
+  let dpFallback = 0;
+  for (const i of danoveIndices) {
+    const r = records[i];
+    const personIndex = r.personIndex ?? dpFallback++;
+    const filePath = r.filePath;
+    const doctlyDpName = doctlyUploadFilenameForCasePath(r.casePathNorm, documents);
     try {
-      let dpData = await extractDapFromFile(filePath);
+      let dpData = await extractDapFromFile(
+        filePath,
+        doctlyDpName ? { doctlyUploadFilename: doctlyDpName } : undefined
+      );
       const hasDpContent =
         (dpData.rows && Object.values(dpData.rows).some((v) => v != null)) ||
         dpData.meta?.dicNormalized ||
@@ -165,17 +325,21 @@ export async function runExtractionsForCase(caseId: string): Promise<void> {
   const vypisyIndices = records.map((r, i) => (r.fileType === "vypisy" ? i : -1)).filter((i) => i >= 0);
   const numPersonsForVypisy = Math.max(allData.length, 1);
   const personIndexByFileIndex = new Map<number, number>();
-  for (let i = 0; i < vypisyIndices.length; i++) {
-    const recordIdx = vypisyIndices[i];
-    const filePath = records[recordIdx].filePath;
+  for (let vi = 0; vi < vypisyIndices.length; vi++) {
+    const recordIdx = vypisyIndices[vi];
+    const r = records[recordIdx];
     let personIndex: number;
-    try {
-      const text = await getTextFromFile(filePath);
-      const holderName = extractAccountHolderFromText(text);
-      const matched = findPersonIndexByHolderName(holderName, allData);
-      personIndex = matched ?? (i % numPersonsForVypisy);
-    } catch {
-      personIndex = i % numPersonsForVypisy;
+    if (r.personIndex !== null) {
+      personIndex = r.personIndex;
+    } else {
+      try {
+        const text = await getTextFromFile(r.filePath);
+        const holderName = extractAccountHolderFromText(text);
+        const matched = findPersonIndexByHolderName(holderName, allData);
+        personIndex = matched ?? (vi % numPersonsForVypisy);
+      } catch {
+        personIndex = vi % numPersonsForVypisy;
+      }
     }
     personIndexByFileIndex.set(recordIdx, personIndex);
   }

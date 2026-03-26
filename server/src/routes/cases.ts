@@ -2,14 +2,16 @@ import { Router } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getCaseUploadDir, getUploadDir } from "../lib/upload.js";
-import { extractFromOpFile, extractOnePersonFromOpTexts, mergeExtractedData } from "../lib/extractOp.js";
+import { extractOnePersonFromOpTexts, mergeDoctlyIdExtractedData } from "../lib/extractOp.js";
 import { detectDocumentType, isAllowedDocumentType } from "../lib/detectDocumentType.js";
 import { getTextForClassification } from "../lib/classification.js";
-import { isImageFile, recognizeText } from "../lib/ocr.js";
 import { extractDapFromFile, extractDapFromText, convertParsedToLegacy, enrichParsedDapFromAres } from "../lib/extractDap.js";
+import { executeExtractorJson } from "../lib/doctly.js";
+import { parseDoctlyIdExtraction } from "../lib/doctlyId.js";
 import getAresDataFromDic from "../lib/ares.js";
 import {
   extractAccountHolderFromText,
@@ -20,6 +22,14 @@ import {
   type VypisyExtractResult,
 } from "../lib/extractVypisy.js";
 import { caseToFillModel } from "../lib/fillModel.js";
+
+function fileSha256HexSafe(filePath: string): string | null {
+  try {
+    return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+  } catch {
+    return null;
+  }
+}
 
 /** Najde personIndex osoby, která nejlépe odpovídá jménu držitele účtu z výpisu. */
 function findPersonIndexByHolderName(
@@ -60,6 +70,11 @@ function getPersonIndexFromApplicantId(applicantId?: string | null): number | nu
 
 const router = Router();
 router.use(requireAuth);
+
+function getIdExtractorSlug(): string | null {
+  const slug = process.env.DOCTLY_ID_EXTRACTOR_SLUG?.trim();
+  return slug?.length ? slug : null;
+}
 
 /** Případy, u kterých právě běží extrakce (DP/OP/výpisy) – pro progress na kartě v přehledu. */
 const caseIdsWithActiveExtraction = new Set<string>();
@@ -105,6 +120,33 @@ function deriveDealStatus(c: { dealStatus?: string | null; status?: string }): s
   if (s === "novy") return "NEW";
   if (s === "data-vytazena" || s === "doplneno") return "DATA_EXTRACTED";
   return "NEW";
+}
+
+function normUploadPath(p: string): string {
+  return p.replace(/\\/g, "/");
+}
+
+/** Stejná konvence jako convertLeadToCase / runExtractions – pro Nahrané podklady per žadatel. */
+function personRoleForCaseFile(
+  c: { id: string; documents?: { storageKey: string; personRole: string }[] },
+  filePath: string
+): "APPLICANT" | "CO_APPLICANT" | null {
+  const norm = normUploadPath(filePath);
+  for (const d of c.documents ?? []) {
+    if (normUploadPath(d.storageKey) === norm) {
+      return d.personRole === "CO_APPLICANT" ? "CO_APPLICANT" : "APPLICANT";
+    }
+  }
+  const base = path.basename(norm);
+  if (/-CO_APPLICANT-/.test(base)) return "CO_APPLICANT";
+  if (/-APPLICANT-/.test(base)) return "APPLICANT";
+  return null;
+}
+
+/** Odpovídá migrateCase: personIndex i → applicant-{caseId}-{i+1}. */
+function applicantIdForPersonRole(caseId: string, role: "APPLICANT" | "CO_APPLICANT"): string {
+  const personIndex = role === "CO_APPLICANT" ? 1 : 0;
+  return `applicant-${caseId}-${personIndex + 1}`;
 }
 
 function toCaseResponse(c: any): any {
@@ -156,12 +198,17 @@ function toCaseResponse(c: any): any {
           })(),
         }))
       : undefined,
-    soubory: (c.files ?? []).map((f: any) => ({
-      id: f.id,
-      name: f.name,
-      type: f.type,
-      url: `/uploads/${c.id}/${path.basename(f.path)}`,
-    })),
+    soubory: (c.files ?? []).map((f: any) => {
+      const role = personRoleForCaseFile(c, f.path);
+      const applicantId = role ? applicantIdForPersonRole(c.id, role) : undefined;
+      return {
+        id: f.id,
+        name: f.name,
+        type: f.type,
+        url: `/uploads/${c.id}/${path.basename(f.path)}`,
+        ...(applicantId ? { applicantId } : {}),
+      };
+    }),
     isActive: c.isActive,
     lead: c.lead ? { id: c.lead.id, ico: c.lead.intakeSession?.ico ?? undefined } : undefined,
   };
@@ -208,7 +255,7 @@ router.patch("/:id/status", async (req, res) => {
   }
   const updated = await prisma.case.findUnique({
     where: { id: caseId },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.json(toCaseResponseWithProgress(updated));
 });
@@ -219,7 +266,7 @@ router.get("/", async (req, res) => {
   const cases = await prisma.case.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.json(cases.map(toCaseResponseWithProgress));
 });
@@ -229,7 +276,7 @@ router.get("/:id", async (req, res) => {
   const userId = (req as any).user.userId;
   const c = await prisma.case.findFirst({
     where: { id: req.params.id, userId },
-    include: { extractedData: true, files: true, lead: { include: { intakeSession: true } } },
+    include: { extractedData: true, files: true, documents: true, lead: { include: { intakeSession: true } } },
   });
   if (!c) {
     res.status(404).json({ error: "Případ nenalezen." });
@@ -243,7 +290,7 @@ router.get("/active/current", async (req, res) => {
   const userId = (req as any).user.userId;
   const c = await prisma.case.findFirst({
     where: { userId, isActive: true },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   if (!c) {
     res.json({ case: null });
@@ -293,7 +340,7 @@ router.post("/", async (req, res) => {
       ucel: body.ucel ?? null,
       isActive: false,
     },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
 
   if (body.extractedData) {
@@ -316,7 +363,7 @@ router.post("/", async (req, res) => {
 
   const updated = await prisma.case.findUnique({
     where: { id: c.id },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.status(201).json(toCaseResponseWithProgress(updated!));
 });
@@ -352,7 +399,7 @@ router.post("/from-files", uploadMemory.array("files", 20), async (req, res) => 
   const caseId = c.id;
   const caseDir = getCaseUploadDir(caseId);
 
-  type FileRecord = { fileType: string; ocrText: string; filePath: string };
+  type FileRecord = { fileType: string; ocrText: string; filePath: string; idPayload: unknown | null };
   const records: FileRecord[] = [];
 
   console.log("[API] Nový případ ze souborů, počet:", files.length, "| auto-detekce:", useAutoDetect);
@@ -367,21 +414,30 @@ router.post("/from-files", uploadMemory.array("files", 20), async (req, res) => 
 
     let fileType: string;
     let ocrText = "";
+    let idPayload: unknown | null = null;
 
     if (!useAutoDetect && allowedTypes.includes(types[i])) {
       fileType = types[i];
       if (fileType === "op-predni" || fileType === "op-zadni") {
-        ocrText = await recognizeText(filePath);
+        const slug = getIdExtractorSlug();
+        if (slug) {
+          idPayload = await executeExtractorJson(filePath, {
+            slug,
+            uploadFilename: file.originalname || filename,
+          });
+        }
       }
     } else {
       const textForClassification = await getTextForClassification(filePath);
       const detectedType = detectDocumentType(textForClassification, file.originalname || filename);
       fileType = isAllowedDocumentType(detectedType) ? detectedType : "vypisy";
       if (fileType === "op-predni" || fileType === "op-zadni") {
-        if (isImageFile(filePath)) {
-          ocrText = await recognizeText(filePath);
-        } else {
-          ocrText = textForClassification;
+        const slug = getIdExtractorSlug();
+        if (slug) {
+          idPayload = await executeExtractorJson(filePath, {
+            slug,
+            uploadFilename: file.originalname || filename,
+          });
         }
       } else {
         ocrText = textForClassification;
@@ -389,7 +445,7 @@ router.post("/from-files", uploadMemory.array("files", 20), async (req, res) => 
     }
 
     console.log("[API] Soubor", i + 1, "/", files.length, ":", file.originalname, "| typ:", fileType, "| OCR znaků:", ocrText.length);
-    records.push({ fileType, ocrText, filePath });
+    records.push({ fileType, ocrText, filePath, idPayload });
 
     const relPath = path.join(caseId, filename);
     await prisma.caseFile.create({
@@ -407,14 +463,24 @@ router.post("/from-files", uploadMemory.array("files", 20), async (req, res) => 
   const zadniIndices = records.map((r, i) => (r.fileType === "op-zadni" ? i : -1)).filter((i) => i >= 0);
   const numPersons = Math.max(predniIndices.length, zadniIndices.length, 1);
   for (let personIndex = 0; personIndex < numPersons; personIndex++) {
-    const texts: string[] = [];
-    if (predniIndices[personIndex] !== undefined) texts.push(records[predniIndices[personIndex]].ocrText);
-    if (zadniIndices[personIndex] !== undefined) texts.push(records[zadniIndices[personIndex]].ocrText);
-    const combined = texts.filter(Boolean).join("\n\n");
-    console.log("[API] Osoba", personIndex, "| combined délka:", combined.trim().length, "| predni:", predniIndices[personIndex], "zadni:", zadniIndices[personIndex]);
-    if (!combined.trim()) continue;
+    const payloads: unknown[] = [];
+    const seen = new Set<string>();
+    for (const idx of [predniIndices[personIndex], zadniIndices[personIndex]]) {
+      if (idx === undefined) continue;
+      const r = records[idx];
+      const h = fileSha256HexSafe(r.filePath);
+      if (h && seen.has(h)) continue;
+      if (h) seen.add(h);
+      if (r.idPayload) payloads.push(r.idPayload);
+    }
+    console.log("[API] Osoba", personIndex, "| ID payloads:", payloads.length, "| predni:", predniIndices[personIndex], "zadni:", zadniIndices[personIndex]);
+    if (!payloads.length) continue;
     try {
-      await extractOnePersonFromOpTexts(combined, caseId, personIndex);
+      for (const payload of payloads) {
+        const parsed = parseDoctlyIdExtraction(payload);
+        if (!parsed) continue;
+        await mergeDoctlyIdExtractedData(caseId, parsed, personIndex);
+      }
     } catch (err) {
       console.error("[cases] Extrakce OP pro osobu", personIndex, "selhala:", err);
     }
@@ -425,24 +491,6 @@ router.post("/from-files", uploadMemory.array("files", 20), async (req, res) => 
     orderBy: { personIndex: "asc" },
   });
   if (allData.length === 0) {
-    const predniTexts = records.filter((r) => r.fileType === "op-predni").map((r) => r.ocrText).filter(Boolean);
-    const zadniTexts = records.filter((r) => r.fileType === "op-zadni").map((r) => r.ocrText).filter(Boolean);
-    let fallbackCombined = [...predniTexts, ...zadniTexts].join("\n\n");
-    if (fallbackCombined.trim().length === 0 && records.length > 0) {
-      fallbackCombined = records.map((r) => r.ocrText).filter(Boolean).join("\n\n");
-    }
-    if (fallbackCombined.trim().length > 0) {
-      console.log("[API] Fallback: žádná data, zkouším všechny OCR texty dohromady, délka:", fallbackCombined.length);
-      try {
-        await extractOnePersonFromOpTexts(fallbackCombined, caseId, 0);
-        allData = await prisma.extractedData.findMany({
-          where: { caseId },
-          orderBy: { personIndex: "asc" },
-        });
-      } catch (e) {
-        console.error("[cases] Fallback extrakce selhal:", e);
-      }
-    }
     if (allData.length === 0 && (predniIndices.length > 0 || zadniIndices.length > 0)) {
       await prisma.extractedData.create({
         data: {
@@ -579,7 +627,7 @@ router.post("/from-files", uploadMemory.array("files", 20), async (req, res) => 
 
   const updated = await prisma.case.findUnique({
     where: { id: caseId },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.status(201).json(toCaseResponseWithProgress(updated!));
 });
@@ -667,7 +715,7 @@ router.patch("/:id", async (req, res) => {
 
   const updated = await prisma.case.findUnique({
     where: { id: req.params.id },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.json(toCaseResponseWithProgress(updated!));
 });
@@ -694,7 +742,7 @@ router.post("/:id/active", async (req, res) => {
 
   const updated = await prisma.case.findUnique({
     where: { id },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.json(toCaseResponseWithProgress(updated!));
 });
@@ -730,7 +778,7 @@ router.delete("/:id/files/:fileId", async (req, res) => {
   await prisma.caseFile.delete({ where: { id: fileId } });
   const updated = await prisma.case.findUnique({
     where: { id: caseId },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.status(200).json(toCaseResponseWithProgress(updated!));
 });
@@ -785,12 +833,16 @@ router.post("/:id/files", (req, res, next) => {
       parseInt(String((req.query as any)?.personIndex ?? req.body?.personIndex ?? 0), 10)
     );
     const personIndex = personFromApplicant ?? personFromParam;
-    console.log("[API] Spouštím OCR pro OP, typ:", fileType, "| applicantId:", applicantId, "| personIndex:", personIndex);
+    console.log("[API] Spouštím Doctly extractor pro OP, typ:", fileType, "| applicantId:", applicantId, "| personIndex:", personIndex);
     try {
-      const { recognizeText: ocrRecognize } = await import("../lib/ocr.js");
-      const ocrText = await ocrRecognize(file.path);
-      if (ocrText.trim()) {
-        await extractOnePersonFromOpTexts(ocrText, caseId, personIndex);
+      const slug = getIdExtractorSlug();
+      if (slug) {
+        const payload = await executeExtractorJson(file.path, {
+          slug,
+          uploadFilename: file.originalname || file.filename,
+        });
+        const parsed = parseDoctlyIdExtraction(payload);
+        if (parsed) await mergeDoctlyIdExtractedData(caseId, parsed, personIndex);
         if (personIndex === 0) {
           const data = await prisma.extractedData.findFirst({ where: { caseId, personIndex: 0 } });
           const fullName = data ? [data.jmeno, data.prijmeni].filter(Boolean).join(" ") : "";
@@ -799,6 +851,8 @@ router.post("/:id/files", (req, res, next) => {
             data: { jmeno: fullName || undefined, status: "data-vytazena" },
           });
         }
+      } else {
+        console.warn("[cases] Chybí DOCTLY_ID_EXTRACTOR_SLUG, OP extrakce přeskočena.");
       }
     } catch (err) {
       console.error("[cases] Extrakce OP selhala:", err);
@@ -904,7 +958,7 @@ router.post("/:id/files", (req, res, next) => {
 
   const updated = await prisma.case.findUnique({
     where: { id: caseId },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.status(201).json(toCaseResponseWithProgress(updated!));
 });
@@ -956,7 +1010,7 @@ router.post("/:id/dp/parse-raw", async (req, res) => {
 
     const updated = await prisma.case.findUnique({
       where: { id: caseId },
-      include: { extractedData: true, files: true },
+      include: { extractedData: true, files: true, documents: true },
     });
     res.status(200).json(toCaseResponseWithProgress(updated!));
   } catch (err) {
@@ -1035,7 +1089,7 @@ router.post("/:id/dp/reparse", async (req, res) => {
 
     const updated = await prisma.case.findUnique({
       where: { id: caseId },
-      include: { extractedData: true, files: true },
+      include: { extractedData: true, files: true, documents: true },
     });
     res.status(200).json(toCaseResponseWithProgress(updated!));
   } catch (err) {
@@ -1104,7 +1158,7 @@ router.post("/:id/dp/ares-enrich", requireAuth, async (req, res) => {
   if (aresResult.ico == null && aresResult.czNacePrevazujici == null) {
     const c = await prisma.case.findUnique({
       where: { id: caseId },
-      include: { extractedData: true, files: true },
+      include: { extractedData: true, files: true, documents: true },
     });
     res.status(200).json(toCaseResponseWithProgress(c!));
     return;
@@ -1126,12 +1180,12 @@ router.post("/:id/dp/ares-enrich", requireAuth, async (req, res) => {
 
   const updated = await prisma.case.findUnique({
     where: { id: caseId },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.status(200).json(toCaseResponseWithProgress(updated!));
 });
 
-// Re-parse OP z již uloženého raw textu (bez volání OCR/LLM)
+// Re-parse OP z uloženého JSON/textu (bez nového volání Doctly/OCR)
 router.post("/:id/op/reparse", async (req, res) => {
   const userId = (req as any).user.userId;
   const caseId = req.params.id;
@@ -1152,17 +1206,32 @@ router.post("/:id/op/reparse", async (req, res) => {
   const dataRow = await prisma.extractedData.findUnique({
     where: { caseId_personIndex: { caseId, personIndex } },
   });
-  const rawText = (dataRow?.opRawText ?? "").trim();
-  if (!rawText) {
-    res.status(400).json({ error: "Chybí uložený raw výstup z OP. Nahrajte OP znovu." });
-    return;
+  const rawJson = (dataRow?.opDoctlyJson ?? "").trim();
+  if (rawJson) {
+    try {
+      const payload = JSON.parse(rawJson);
+      const parsed = parseDoctlyIdExtraction(payload);
+      if (!parsed) {
+        res.status(400).json({ error: "Uložený JSON z OP nelze zpracovat." });
+        return;
+      }
+      await mergeDoctlyIdExtractedData(caseId, parsed, personIndex);
+    } catch {
+      res.status(400).json({ error: "Uložený JSON z OP nelze přečíst." });
+      return;
+    }
+  } else {
+    const rawText = (dataRow?.opRawText ?? "").trim();
+    if (!rawText) {
+      res.status(400).json({ error: "Chybí uložený raw výstup z OP. Nahrajte OP znovu." });
+      return;
+    }
+    await extractOnePersonFromOpTexts(rawText, caseId, personIndex);
   }
-
-  await extractOnePersonFromOpTexts(rawText, caseId, personIndex);
 
   const updated = await prisma.case.findUnique({
     where: { id: caseId },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.status(200).json(toCaseResponseWithProgress(updated!));
 });
@@ -1242,7 +1311,7 @@ router.post("/:id/vypisy/reparse", async (req, res) => {
 
   const updated = await prisma.case.findUnique({
     where: { id: caseId },
-    include: { extractedData: true, files: true },
+    include: { extractedData: true, files: true, documents: true },
   });
   res.status(200).json(toCaseResponseWithProgress(updated!));
 });

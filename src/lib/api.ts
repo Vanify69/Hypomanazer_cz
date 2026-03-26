@@ -262,6 +262,17 @@ export async function regenerateLeadLink(id: string): Promise<{
   return apiRequest(`/api/leads/${id}/regenerate-link`, { method: 'POST' });
 }
 
+/** Znovu otevře intake (nový token) po odeslání / konverzi – pro test nebo doplnění podkladů. */
+export async function reopenLeadIntake(
+  id: string,
+  options?: { clearUploads?: boolean }
+): Promise<{ ok: boolean; intakeLink: string; expiresAt: string; message?: string }> {
+  return apiRequest(`/api/leads/${id}/reopen-intake`, {
+    method: 'POST',
+    body: { clearUploads: Boolean(options?.clearUploads) },
+  });
+}
+
 export async function expireLead(id: string): Promise<{ ok: boolean }> {
   return apiRequest(`/api/leads/${id}/expire`, { method: 'POST' });
 }

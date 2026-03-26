@@ -257,8 +257,14 @@ export function CaseDetail() {
           setCaseData(c);
           setVyseUveru(c.vyseUveru?.toString() || '');
           setUcel(c.ucel || '');
+          const stored =
+            typeof sessionStorage !== 'undefined'
+              ? sessionStorage.getItem(`case-active-applicant:${id}`)
+              : null;
+          const applicantsList = c.applicants ?? [];
+          const storedOk = Boolean(stored && applicantsList.some((a) => a.id === stored));
           setActiveApplicantId(
-            c.activeApplicantId ?? c.applicants?.[0]?.id ?? ''
+            storedOk ? stored! : (c.activeApplicantId ?? applicantsList[0]?.id ?? '')
           );
         } else {
           setCaseData(null);
@@ -328,16 +334,11 @@ export function CaseDetail() {
     }, 0);
   };
 
-  const handleTabChange = async (applicantId: string) => {
-    const prevApplicantId = activeApplicantId;
+  /** Aktivní žadatel je jen UI stav – PATCH případu ho neukládá; saveCase zde dělalo zbytečný request a při chybě problikávalo. */
+  const handleTabChange = (applicantId: string) => {
     setActiveApplicantId(applicantId);
-    if (caseData) {
-      try {
-        const updated = await saveCase({ ...caseData, activeApplicantId: applicantId });
-        if (mountedRef.current) setCaseData(updated);
-      } catch {
-        if (mountedRef.current) setActiveApplicantId(prevApplicantId);
-      }
+    if (id && typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(`case-active-applicant:${id}`, applicantId);
     }
   };
 

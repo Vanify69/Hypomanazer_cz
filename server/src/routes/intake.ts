@@ -125,8 +125,13 @@ router.post("/:token/progress", async (req: Request, res: Response) => {
   await ensureIdSlot("APPLICANT", "ID_BACK");
 
   if (!body.hasCoApplicant) {
+    /** Nesmazat nahrané CO sloty – zabrání ztrátě dat při race (klient po načtení poslal hasCoApplicant: false). */
     await prisma.uploadSlot.deleteMany({
-      where: { intakeSessionId: session.id, personRole: "CO_APPLICANT" },
+      where: {
+        intakeSessionId: session.id,
+        personRole: "CO_APPLICANT",
+        NOT: { status: "UPLOADED" },
+      },
     });
   } else {
     await ensureIdSlot("CO_APPLICANT", "ID_FRONT");

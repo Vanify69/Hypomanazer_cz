@@ -58,16 +58,21 @@ async function getTextFromPdf(filePath: string): Promise<string> {
   }
 }
 
-export async function getTextFromDapFile(filePath: string): Promise<string> {
+export async function getTextFromDapFile(
+  filePath: string,
+  options?: { doctlyUploadFilename?: string }
+): Promise<string> {
   const fullPath = path.resolve(filePath);
   if (!fs.existsSync(fullPath)) return "";
   if (isDoctlyAvailable() && isDoctlySupportedFile(fullPath)) {
-    const doctlyText = await getTextFromDocument(fullPath);
+    const doctlyText = await getTextFromDocument(fullPath, {
+      uploadFilename: options?.doctlyUploadFilename,
+    });
     if (doctlyText && doctlyText.trim().length > 0) return doctlyText;
   }
   const ext = path.extname(fullPath).toLowerCase();
   if (ext === ".pdf") return getTextFromPdf(fullPath);
-  if (isImageFile(fullPath)) return recognizeText(fullPath);
+  if (isImageFile(fullPath)) return recognizeText(fullPath, { doctlyUploadFilename: options?.doctlyUploadFilename });
   return "";
 }
 
@@ -91,9 +96,13 @@ export function extractDapFromText(text: string, source = "inline-text"): Parsed
 /**
  * Z souboru (PDF/obrázek) vrátí ParsedDapFo. Backend ukládá tento formát do dpData.
  */
-export async function extractDapFromFile(filePath: string): Promise<ParsedDapFo> {
-  const text = await getTextFromDapFile(filePath);
-  return extractDapFromText(text, path.basename(filePath));
+export async function extractDapFromFile(
+  filePath: string,
+  options?: { doctlyUploadFilename?: string }
+): Promise<ParsedDapFo> {
+  const text = await getTextFromDapFile(filePath, options);
+  const label = options?.doctlyUploadFilename?.trim() || path.basename(filePath);
+  return extractDapFromText(text, label);
 }
 
 /**

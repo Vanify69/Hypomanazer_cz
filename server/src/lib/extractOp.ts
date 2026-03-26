@@ -4,6 +4,7 @@ import { recognizeText, isImageFile } from "./ocr.js";
 import { parseOpFront, parseOpBack, toDisplayText, rcToDatumNarozeni, rcToPohlavi } from "./parseOp.js";
 import { detectDocumentType, type DocumentType } from "./detectDocumentType.js";
 import { extractPersonFromOpWithLlm, type LlmExtractedPerson } from "./llmExtract.js";
+import { type DoctlyIdExtraction, isoDateToCzDate, sexToUiValue } from "./doctlyId.js";
 
 export interface ExtractedUpdate {
   jmeno?: string;
@@ -129,6 +130,50 @@ export async function mergeExtractedData(
     datumVydani: update.datumVydani ?? existing?.datumVydani ?? null,
     platnostDo: update.platnostDo ?? existing?.platnostDo ?? null,
     vydavajiciUrad: update.vydavajiciUrad ?? existing?.vydavajiciUrad ?? null,
+  };
+
+  if (existing) {
+    await prisma.extractedData.update({
+      where: { id: existing.id },
+      data,
+    });
+  } else {
+    await prisma.extractedData.create({
+      data: { caseId, personIndex, ...data },
+    });
+  }
+}
+
+/**
+ * Deterministický merge z Doctly ID JSON (hard-cut: žádné MRZ/regex preference).
+ */
+export async function mergeDoctlyIdExtractedData(
+  caseId: string,
+  idJson: DoctlyIdExtraction,
+  personIndex: number = 0
+): Promise<void> {
+  const existing = await prisma.extractedData.findFirst({
+    where: { caseId, personIndex },
+  });
+
+  const rawJson = JSON.stringify(idJson);
+  const data = {
+    jmeno: idJson.holder.givenNames ?? existing?.jmeno ?? "",
+    prijmeni: idJson.holder.surname ?? existing?.prijmeni ?? "",
+    rc: idJson.holder.personalNumber ?? existing?.rc ?? "",
+    adresa: idJson.address.fullAddress ?? existing?.adresa ?? "",
+    prijmy: existing?.prijmy ?? 0,
+    vydaje: existing?.vydaje ?? 0,
+    datumNarozeni: isoDateToCzDate(idJson.holder.dateOfBirth) ?? existing?.datumNarozeni ?? null,
+    mistoNarozeni: idJson.holder.placeOfBirth ?? existing?.mistoNarozeni ?? null,
+    pohlavi: sexToUiValue(idJson.holder.sex) ?? existing?.pohlavi ?? null,
+    narodnost: idJson.holder.nationality ?? existing?.narodnost ?? null,
+    rodinnyStav: existing?.rodinnyStav ?? null,
+    cisloDokladu: idJson.document.documentNumber ?? existing?.cisloDokladu ?? null,
+    datumVydani: isoDateToCzDate(idJson.document.dateOfIssue) ?? existing?.datumVydani ?? null,
+    platnostDo: isoDateToCzDate(idJson.document.dateOfExpiry) ?? existing?.platnostDo ?? null,
+    vydavajiciUrad: idJson.document.issuedBy ?? existing?.vydavajiciUrad ?? null,
+    opDoctlyJson: rawJson,
   };
 
   if (existing) {

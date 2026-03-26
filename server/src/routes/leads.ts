@@ -1,6 +1,9 @@
+import path from "path";
+import fs from "fs";
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
+import { getIntakeUploadDir } from "../lib/upload.js";
 import {
   generateToken,
   hashToken,
@@ -491,6 +494,89 @@ router.post("/:id/regenerate-link", async (req: Request, res: Response) => {
     ok: true,
     intakeLink,
     expiresAt: expiresAt.toISOString(),
+  });
+});
+
+/**
+ * POST /api/leads/:id/reopen-intake – nový token + otevření wizardu i po odeslání / konverzi (testování, doplnění).
+ * Body: { clearUploads?: boolean } – smaže soubory ve slotech intake session.
+ */
+router.post("/:id/reopen-intake", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+  const clearUploads = Boolean((req.body as { clearUploads?: boolean })?.clearUploads);
+
+  const lead = await prisma.lead.findFirst({
+    where: { id, ownerUserId: userId },
+    include: { intakeSession: { include: { uploadSlots: true } } },
+  });
+  if (!lead?.intakeSession) {
+    res.status(404).json({ error: "Lead nebo intake session nenalezena." });
+    return;
+  }
+  const sess = lead.intakeSession;
+  const blocked = ["CREATED", "SENT", "OPENED", "IN_PROGRESS"] as const;
+  if ((blocked as readonly string[]).includes(sess.state)) {
+    res.status(400).json({
+      error: "Intake je ještě aktivní – zkopírujte stávající odkaz nebo použijte „Obnovit odkaz“.",
+    });
+    return;
+  }
+
+  if (clearUploads) {
+    const dir = getIntakeUploadDir(sess.id);
+    for (const slot of sess.uploadSlots) {
+      if (slot.storageKey) {
+        const fp = path.join(dir, slot.storageKey);
+        if (fs.existsSync(fp)) {
+          try {
+            fs.unlinkSync(fp);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+    await prisma.uploadSlot.updateMany({
+      where: { intakeSessionId: sess.id },
+      data: { storageKey: null, status: "EMPTY" },
+    });
+  }
+
+  const rawToken = generateToken();
+  const tokenHash = hashToken(rawToken);
+  const expiresAt = getIntakeExpiresAt();
+  const intakeLink = `${getFrontendBaseUrl()}/intake/${rawToken}`;
+
+  await prisma.intakeSession.update({
+    where: { id: sess.id },
+    data: {
+      tokenHash,
+      intakeLink,
+      expiresAt,
+      state: IntakeSessionState.OPENED,
+      submittedAt: null,
+      consentAt: null,
+      consentVersion: null,
+      ...(clearUploads ? { intakeMetadata: null } : {}),
+    },
+  });
+
+  await prisma.leadEvent.create({
+    data: {
+      leadId: lead.id,
+      type: LeadEventType.INTAKE_PROGRESS,
+      payload: JSON.stringify({ action: "reopen-intake", clearUploads }),
+    },
+  });
+
+  res.json({
+    ok: true,
+    intakeLink,
+    expiresAt: expiresAt.toISOString(),
+    message: clearUploads
+      ? "Odkaz byl obnoven a nahrávky ve slotech vymazány."
+      : "Odkaz byl obnoven; nahrané soubory ve slotech zůstaly (lze je smazat v průběhu).",
   });
 });
 

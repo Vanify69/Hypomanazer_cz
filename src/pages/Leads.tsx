@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Plus, Copy, Send, Search, Pencil, Trash2, ArchiveRestore, ExternalLink } from 'lucide-react';
-import { getLeads, regenerateLeadLink, sendLeadLink, createLeadIntake, deleteLead, restoreLead, deleteLeadPermanently, type Lead } from '../lib/api';
+import { Plus, Copy, Send, Search, Pencil, Trash2, ArchiveRestore, ExternalLink, RefreshCw } from 'lucide-react';
+import {
+  getLeads,
+  regenerateLeadLink,
+  reopenLeadIntake,
+  sendLeadLink,
+  createLeadIntake,
+  deleteLead,
+  restoreLead,
+  deleteLeadPermanently,
+  type Lead,
+} from '../lib/api';
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Koncept',
@@ -51,6 +61,19 @@ function displayName(lead: Lead) {
   return `${lead.firstName} ${lead.lastName}`.trim() || `Lead ${a}${b}`.toUpperCase() || '—';
 }
 
+/** Po odeslání/konverzi je kopírování vypnuté, dokud není intake znovu otevřen (reopen → OPENED). */
+function isCopyIntakeLinkDisabled(lead: Lead): boolean {
+  if (lead.status !== 'SUBMITTED' && lead.status !== 'CONVERTED' && lead.status !== 'EXPIRED') return false;
+  const st = lead.intakeSession?.state;
+  if (st === 'OPENED' || st === 'IN_PROGRESS') return false;
+  return true;
+}
+
+function canReopenIntakeLink(lead: Lead): boolean {
+  if (!lead.intakeSession) return false;
+  return lead.status === 'SUBMITTED' || lead.status === 'CONVERTED' || lead.status === 'EXPIRED';
+}
+
 export function Leads() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +89,7 @@ export function Leads() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [permanentDeletingId, setPermanentDeletingId] = useState<string | null>(null);
+  const [reopeningId, setReopeningId] = useState<string | null>(null);
   const mountedRef = React.useRef(true);
 
   const load = () => {
@@ -194,6 +218,31 @@ export function Leads() {
       alert(err instanceof Error ? err.message : 'Trvalé odstranění se nepodařilo.');
     } finally {
       setPermanentDeletingId(null);
+    }
+  };
+
+  const handleReopenIntake = async (lead: Lead) => {
+    if (reopeningId === lead.id) return;
+    if (
+      !window.confirm(
+        'Znovu aktivovat odkaz na podklady? Vygeneruje se nová URL, klient může projít formulářem znovu. Existující případ v CRM se nemění.'
+      )
+    ) {
+      return;
+    }
+    const clearUploads = window.confirm(
+      'Smazat již nahrané soubory v tomto odkazu? OK = prázdné sloty (vhodné pro čistý test). Zrušit = soubory zůstanou ve slotech.'
+    );
+    setReopeningId(lead.id);
+    try {
+      const res = await reopenLeadIntake(lead.id, { clearUploads });
+      await navigator.clipboard.writeText(res.intakeLink);
+      await load();
+      alert(res.message ? `${res.message}\n\nOdkaz je zkopírovaný ve schránce.` : 'Odkaz byl zkopírován do schránky.');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Obnovení odkazu se nepodařilo.');
+    } finally {
+      setReopeningId(null);
     }
   };
 
@@ -335,6 +384,7 @@ export function Leads() {
                 const isCopying = copyId === lead.id;
                 const isSending = sendingId === lead.id;
                 const isProcessing = processingId === lead.id;
+                const showReopenIntake = canReopenIntakeLink(lead);
                 return (
                   <div
                     key={lead.id}
@@ -395,7 +445,7 @@ export function Leads() {
                               <button
                                 type="button"
                                 onClick={() => handleCopyLink(lead)}
-                                disabled={lead.status === 'SUBMITTED' || lead.status === 'CONVERTED' || lead.status === 'EXPIRED'}
+                                disabled={isCopyIntakeLinkDisabled(lead)}
                                 className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 min-h-[44px]"
                               >
                                 {isCopying ? 'Zkopírováno' : <><Copy className="w-4 h-4" /> Kopírovat</>}
@@ -409,6 +459,18 @@ export function Leads() {
                                 >
                                   <Send className="w-4 h-4" />
                                   Poslat
+                                </button>
+                              )}
+                              {showReopenIntake && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReopenIntake(lead)}
+                                  disabled={reopeningId === lead.id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 disabled:opacity-50 min-h-[44px]"
+                                  title="Nový odkaz na podklady po odeslání nebo převodu na případ"
+                                >
+                                  <RefreshCw className={`w-4 h-4 ${reopeningId === lead.id ? 'animate-spin' : ''}`} />
+                                  {reopeningId === lead.id ? 'Obnovuji…' : 'Znovu odkaz'}
                                 </button>
                               )}
                             </>
@@ -466,6 +528,7 @@ export function Leads() {
                     const isCopying = copyId === lead.id;
                     const isSending = sendingId === lead.id;
                     const isProcessing = processingId === lead.id;
+                    const showReopenIntake = canReopenIntakeLink(lead);
                     return (
                       <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td className="px-4 py-3 text-gray-900 dark:text-gray-100">{displayName(lead)}</td>
@@ -524,7 +587,7 @@ export function Leads() {
                                   <button
                                     type="button"
                                     onClick={() => handleCopyLink(lead)}
-                                    disabled={lead.status === 'SUBMITTED' || lead.status === 'CONVERTED' || lead.status === 'EXPIRED'}
+                                    disabled={isCopyIntakeLinkDisabled(lead)}
                                     className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
                                     title="Zkopírovat odkaz"
                                   >
@@ -539,6 +602,17 @@ export function Leads() {
                                       title="Poslat link (SMS / e-mail)"
                                     >
                                       <Send className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                  {showReopenIntake && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReopenIntake(lead)}
+                                      disabled={reopeningId === lead.id}
+                                      className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded disabled:opacity-50"
+                                      title="Znovu aktivovat odkaz na podklady (nová URL, volitelně vymazat nahrávky)"
+                                    >
+                                      <RefreshCw className={`w-4 h-4 ${reopeningId === lead.id ? 'animate-spin' : ''}`} />
                                     </button>
                                   )}
                                 </>

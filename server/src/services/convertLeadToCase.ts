@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import { prisma } from "../lib/prisma.js";
 import { getCaseUploadDir, getIntakeUploadDir, getUploadDir } from "../lib/upload.js";
-import type { DocType } from "../lib/prisma.js";
+import type { DocType, PersonRole } from "../lib/prisma.js";
 
 const DOC_TYPE_TO_CASE_FILE_TYPE: Record<DocType, string> = {
   ID_FRONT: "op-predni",
@@ -13,15 +13,50 @@ const DOC_TYPE_TO_CASE_FILE_TYPE: Record<DocType, string> = {
   OTHER: "vypisy",
 };
 
+const DOC_TYPE_COPY_ORDER: DocType[] = [
+  "ID_FRONT",
+  "ID_BACK",
+  "TAX_RETURN",
+  "BANK_STATEMENT",
+  "INCOME_CONFIRMATION",
+  "OTHER",
+];
+
+type SlotWithFile = {
+  id: string;
+  docType: DocType;
+  personRole: PersonRole;
+  status: string;
+  storageKey: string | null;
+  period: string | null;
+};
+
+function sortSlotsForCopy(slots: SlotWithFile[]): SlotWithFile[] {
+  const docRank = (d: DocType) => {
+    const i = DOC_TYPE_COPY_ORDER.indexOf(d);
+    return i === -1 ? 999 : i;
+  };
+  const roleRank = (r: PersonRole) => (r === "CO_APPLICANT" ? 1 : 0);
+  return [...slots].sort((a, b) => {
+    const rr = roleRank(a.personRole) - roleRank(b.personRole);
+    if (rr !== 0) return rr;
+    const dr = docRank(a.docType) - docRank(b.docType);
+    if (dr !== 0) return dr;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 function roleStr(role: unknown): string {
   return typeof role === "string" ? role : String(role ?? "");
 }
 
-/** Spolužadatel: nahrané soubory v CO_APPLICANT slotech, nebo flag v metadatech (submit vždy ukládá hasCoApplicant). */
+/** Spolužadatel: CO_APPLICANT sloty (wizard je vytvořil), nahrané soubory, nebo metadata submitu. */
 function wantsCoApplicantPerson(session: {
   uploadSlots: { personRole: unknown; status: string; storageKey: string | null }[];
   intakeMetadata: string | null;
 }): boolean {
+  const hasCoSlots = session.uploadSlots.some((s) => roleStr(s.personRole) === "CO_APPLICANT");
+  if (hasCoSlots) return true;
   const uploadedCo = session.uploadSlots.some(
     (s) =>
       roleStr(s.personRole) === "CO_APPLICANT" &&
@@ -39,6 +74,43 @@ function wantsCoApplicantPerson(session: {
     /* ignore */
   }
   return false;
+}
+
+async function ensureCoApplicantPersonIfNeeded(
+  session: {
+    uploadSlots: { personRole: unknown; status: string; storageKey: string | null }[];
+    intakeMetadata: string | null;
+  },
+  caseId: string
+): Promise<void> {
+  if (!wantsCoApplicantPerson(session)) return;
+  const existing = await prisma.person.findFirst({
+    where: { caseId, role: "CO_APPLICANT" },
+  });
+  if (existing) return;
+  await prisma.person.create({
+    data: { caseId, role: "CO_APPLICANT" },
+  });
+}
+
+/** Druhá karta v UI (migrateCase) – řádek ExtractedData pro personIndex 1. */
+async function ensureCoApplicantExtractedStub(caseId: string): Promise<void> {
+  const co = await prisma.person.findFirst({ where: { caseId, role: "CO_APPLICANT" } });
+  if (!co) return;
+  await prisma.extractedData.upsert({
+    where: { caseId_personIndex: { caseId, personIndex: 1 } },
+    create: {
+      caseId,
+      personIndex: 1,
+      jmeno: "",
+      prijmeni: "",
+      rc: "",
+      adresa: "",
+      prijmy: 0,
+      vydaje: 0,
+    },
+    update: {},
+  });
 }
 
 /**
@@ -59,10 +131,16 @@ export async function convertLeadToCase(intakeSessionId: string): Promise<{ case
   const lead = session.lead;
   if (lead.status === "CONVERTED") {
     const existing = await prisma.case.findFirst({ where: { leadId: lead.id } });
-    if (existing) return { caseId: existing.id };
+    if (existing) {
+      await ensureCoApplicantPersonIfNeeded(session, existing.id);
+      await ensureCoApplicantExtractedStub(existing.id);
+      return { caseId: existing.id };
+    }
   }
 
-  const slotsWithFile = session.uploadSlots.filter((s) => s.status === "UPLOADED" && s.storageKey);
+  const slotsWithFile = sortSlotsForCopy(
+    session.uploadSlots.filter((s) => s.status === "UPLOADED" && s.storageKey) as SlotWithFile[]
+  );
   const datum = new Date().toLocaleDateString("cs-CZ", {
     day: "numeric",
     month: "numeric",
@@ -102,6 +180,42 @@ export async function convertLeadToCase(intakeSessionId: string): Promise<{ case
         caseId,
         role: "CO_APPLICANT",
       },
+    });
+  }
+
+  const leadFirst = (lead.firstName ?? "").trim();
+  const leadLast = (lead.lastName ?? "").trim();
+  await prisma.extractedData.upsert({
+    where: { caseId_personIndex: { caseId, personIndex: 0 } },
+    create: {
+      caseId,
+      personIndex: 0,
+      jmeno: leadFirst,
+      prijmeni: leadLast,
+      rc: "",
+      adresa: "",
+      prijmy: 0,
+      vydaje: 0,
+    },
+    update: {
+      jmeno: leadFirst,
+      prijmeni: leadLast,
+    },
+  });
+  if (wantsCoApplicantPerson(session)) {
+    await prisma.extractedData.upsert({
+      where: { caseId_personIndex: { caseId, personIndex: 1 } },
+      create: {
+        caseId,
+        personIndex: 1,
+        jmeno: "",
+        prijmeni: "",
+        rc: "",
+        adresa: "",
+        prijmy: 0,
+        vydaje: 0,
+      },
+      update: {},
     });
   }
 

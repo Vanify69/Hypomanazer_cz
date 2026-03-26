@@ -49,6 +49,8 @@ async function prepareImageForOcr(inputBuffer: Buffer): Promise<{ main: Buffer; 
 export interface RecognizeTextOptions {
   /** false = pouze Tesseract (pro klasifikaci a výpisy). Default true = může použít Doctly. */
   useDoctly?: boolean;
+  /** Název v Doctly (role spolužadatele / typ dokumentu) – viz Document v DB. */
+  doctlyUploadFilename?: string;
 }
 
 /**
@@ -67,7 +69,9 @@ export async function recognizeText(
     return "";
   }
   if (useDoctly && isDoctlyAvailable() && isDoctlySupportedFile(absolutePath)) {
-    const doctlyText = await getTextFromDocument(absolutePath);
+    const doctlyText = await getTextFromDocument(absolutePath, {
+      uploadFilename: options?.doctlyUploadFilename,
+    });
     if (doctlyText && doctlyText.trim().length > 0) {
       console.log("[OCR] Použit Doctly, délka textu:", doctlyText.length);
       return doctlyText;
@@ -136,4 +140,32 @@ export async function recognizeText(
   } finally {
     await worker.terminate();
   }
+}
+
+/**
+ * Text z OP (obrázek nebo PDF) pro extrakci údajů – PDF jde přes Doctly stejně jako JPG,
+ * ne jen prvních N znaků z pdf-parse (getTextForClassification).
+ */
+export async function extractTextFromOpFile(
+  filePath: string,
+  options?: RecognizeTextOptions
+): Promise<string> {
+  const absolutePath = path.resolve(filePath);
+  if (!fs.existsSync(absolutePath)) return "";
+  if (isImageFile(absolutePath)) {
+    return recognizeText(absolutePath, options);
+  }
+  const ext = path.extname(absolutePath).toLowerCase();
+  if (ext === ".pdf") {
+    if (isDoctlyAvailable() && isDoctlySupportedFile(absolutePath)) {
+      const t = await getTextFromDocument(absolutePath, {
+        uploadFilename: options?.doctlyUploadFilename,
+      });
+      if (t && t.trim().length > 0) return t;
+    }
+    const { getTextFromFile } = await import("./extractVypisy.js");
+    return getTextFromFile(absolutePath);
+  }
+  const { getTextForClassification } = await import("./classification.js");
+  return getTextForClassification(absolutePath);
 }
