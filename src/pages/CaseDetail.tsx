@@ -476,9 +476,22 @@ export function CaseDetail() {
     setReuploadModalOpen(true);
   };
 
-  const handleViewFile = (file: UploadedFile) => {
+  const handleViewFile = async (file: UploadedFile) => {
     if (!file.url) return;
-    window.open(`${API_BASE}${file.url}`, '_blank', 'noopener,noreferrer');
+    const url = `${API_BASE}${file.url}`;
+    try {
+      const check = await fetch(url, { method: 'HEAD' });
+      if (check.ok) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+    } catch {
+      // pokračujeme fallbackem na reupload modal
+    }
+    setReuploadTargetFile(file);
+    setReuploadSelectedFile(null);
+    setReuploadError('Soubor na serveru už není dostupný. Nahrajte ho znovu.');
+    setReuploadModalOpen(true);
   };
 
   const handleRunReupload = async (extract: boolean) => {
@@ -1477,7 +1490,7 @@ export function CaseDetail() {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleViewFile(file)}
+                            onClick={() => void handleViewFile(file)}
                             className="doc-file-btn doc-file-btn-zobrazit"
                             title="Zobrazit"
                           >
