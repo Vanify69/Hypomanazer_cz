@@ -219,6 +219,36 @@ function normalizeDpBasic(
   };
 }
 
+function getCzNaceSectionLabel(nace: string | undefined): string | undefined {
+  if (!nace) return undefined;
+  const digits = nace.replace(/[^\d]/g, "");
+  if (!digits) return undefined;
+  const p2 = parseInt(digits.slice(0, 2), 10);
+  if (!Number.isFinite(p2)) return undefined;
+  if (p2 >= 1 && p2 <= 3) return "Zemědělství, lesnictví a rybářství";
+  if (p2 >= 5 && p2 <= 9) return "Těžba a dobývání";
+  if (p2 >= 10 && p2 <= 33) return "Zpracovatelský průmysl";
+  if (p2 === 35) return "Výroba a rozvod elektřiny, plynu, tepla";
+  if (p2 >= 36 && p2 <= 39) return "Zásobování vodou; odpady a sanace";
+  if (p2 >= 41 && p2 <= 43) return "Stavebnictví";
+  if (p2 >= 45 && p2 <= 47) return "Velkoobchod a maloobchod; opravy vozidel";
+  if (p2 >= 49 && p2 <= 53) return "Doprava a skladování";
+  if (p2 >= 55 && p2 <= 56) return "Ubytování, stravování a pohostinství";
+  if (p2 >= 58 && p2 <= 63) return "Informační a komunikační činnosti";
+  if (p2 >= 64 && p2 <= 66) return "Peněžnictví a pojišťovnictví";
+  if (p2 === 68) return "Činnosti v oblasti nemovitostí";
+  if (p2 >= 69 && p2 <= 75) return "Profesní, vědecké a technické činnosti";
+  if (p2 >= 77 && p2 <= 82) return "Administrativní a podpůrné činnosti";
+  if (p2 === 84) return "Veřejná správa a obrana; sociální zabezpečení";
+  if (p2 === 85) return "Vzdělávání";
+  if (p2 >= 86 && p2 <= 88) return "Zdravotní a sociální péče";
+  if (p2 >= 90 && p2 <= 93) return "Kulturní, zábavní a rekreační činnosti";
+  if (p2 >= 94 && p2 <= 96) return "Ostatní činnosti";
+  if (p2 >= 97 && p2 <= 98) return "Činnosti domácností jako zaměstnavatelů";
+  if (p2 === 99) return "Exteritoriální organizace a orgány";
+  return undefined;
+}
+
 export function CaseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -1066,6 +1096,10 @@ export function CaseDetail() {
                     : caseData?.lead?.ico;
                 const hasAnyLines = Object.keys(lines).length > 0;
                 const hasAnyBasic = basic.ic || basic.dic || basic.czNace || basic.zpusobVydaju;
+                const czNaceSection = getCzNaceSectionLabel(basic.czNace);
+                const czNaceDisplay = basic.czNace
+                  ? (czNaceSection ? `${basic.czNace} - ${czNaceSection}` : basic.czNace)
+                  : '—';
                 const hasDpData = Boolean(person?.dpData) || hasAnyLines || hasAnyBasic;
                 if (!person || !hasDpData) {
                   return (
@@ -1224,7 +1258,7 @@ export function CaseDetail() {
                         </div>
                         <div className="sm:col-span-2">
                           <span className="text-gray-500">Převažující CZ-NACE</span>
-                          <p className="font-medium text-gray-900">{basic.czNace || '—'}</p>
+                          <p className="font-medium text-gray-900">{czNaceDisplay}</p>
                         </div>
                         <div className="sm:col-span-2">
                           <span className="text-gray-500">Způsob uplatnění výdajů</span>
