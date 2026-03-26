@@ -210,7 +210,13 @@ function toCaseResponse(c: any): any {
       };
     }),
     isActive: c.isActive,
-    lead: c.lead ? { id: c.lead.id, ico: c.lead.intakeSession?.ico ?? undefined } : undefined,
+    lead: c.lead
+      ? {
+          id: c.lead.id,
+          ico: c.lead.intakeSession?.ico ?? undefined,
+          coApplicantIco: c.lead.intakeSession?.coApplicantIco ?? undefined,
+        }
+      : undefined,
   };
 }
 
@@ -763,7 +769,10 @@ router.delete("/:id", async (req, res) => {
 router.delete("/:id/files/:fileId", async (req, res) => {
   const userId = (req as any).user.userId;
   const { id: caseId, fileId } = req.params;
-  const existing = await prisma.case.findFirst({ where: { id: caseId, userId } });
+  const existing = await prisma.case.findFirst({
+    where: { id: caseId, userId },
+    include: { lead: { include: { intakeSession: true } } },
+  });
   if (!existing) {
     res.status(404).json({ error: "Případ nenalezen." });
     return;
@@ -801,7 +810,10 @@ router.post("/:id/files", (req, res, next) => {
     return;
   }
 
-  const existing = await prisma.case.findFirst({ where: { id: caseId, userId } });
+  const existing = await prisma.case.findFirst({
+    where: { id: caseId, userId },
+    include: { lead: { include: { intakeSession: true } } },
+  });
   if (!existing) {
     res.status(404).json({ error: "Případ nenalezen." });
     return;
@@ -981,7 +993,10 @@ router.post("/:id/dp/parse-raw", async (req, res) => {
     return;
   }
 
-  const existing = await prisma.case.findFirst({ where: { id: caseId, userId } });
+  const existing = await prisma.case.findFirst({
+    where: { id: caseId, userId },
+    include: { lead: { include: { intakeSession: true } } },
+  });
   if (!existing) {
     res.status(404).json({ error: "Případ nenalezen." });
     return;
@@ -1112,7 +1127,10 @@ router.post("/:id/dp/ares-enrich", requireAuth, async (req, res) => {
   );
   const personIndex = personFromApplicant ?? personFromParam;
 
-  const existing = await prisma.case.findFirst({ where: { id: caseId, userId } });
+  const existing = await prisma.case.findFirst({
+    where: { id: caseId, userId },
+    include: { lead: { include: { intakeSession: true } } },
+  });
   if (!existing) {
     res.status(404).json({ error: "Případ nenalezen." });
     return;
@@ -1134,19 +1152,26 @@ router.post("/:id/dp/ares-enrich", requireAuth, async (req, res) => {
     return;
   }
 
-  const dic = String(
-    parsed?.meta?.dicNormalized ?? parsed?.dic ?? ""
-  ).trim().toUpperCase().replace(/\s+/g, "");
-  if (!/^CZ\d{8,10}$/.test(dic)) {
+  const dic = String(parsed?.meta?.dicNormalized ?? parsed?.dic ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  const intakeIco =
+    personIndex === 0
+      ? String(existing.lead?.intakeSession?.ico ?? "").trim()
+      : String(existing.lead?.intakeSession?.coApplicantIco ?? "").trim();
+  const fallbackDicFromIco = /^\d{8}$/.test(intakeIco) ? `CZ${intakeIco}` : "";
+  const lookupDic = /^CZ\d{8,10}$/.test(dic) ? dic : fallbackDicFromIco;
+  if (!/^CZ\d{8,10}$/.test(lookupDic)) {
     res.status(400).json({
-      error: "DIČ musí být ve formátu CZ + 8 číslic (IČO) nebo CZ + 9–10 číslic (rodné číslo).",
+      error: "Chybí platné DIČ z DP i IČ z intake (pro ARES lookup).",
     });
     return;
   }
 
   let aresResult: Awaited<ReturnType<typeof getAresDataFromDic>>;
   try {
-    aresResult = await getAresDataFromDic(dic);
+    aresResult = await getAresDataFromDic(lookupDic);
   } catch (err) {
     res.status(502).json({
       error: "ARES nedostupný nebo chyba.",

@@ -157,8 +157,8 @@ export interface Case {
   activeApplicantId?: string;
   soubory: UploadedFile[];
   isActive: boolean;
-  /** Lead (z intake) – IČ zadané v intake se zobrazí v „Základní údaje z DP“, pokud není z DP */
-  lead?: { id: string; ico?: string };
+  /** Lead (z intake) – IČ zadané v intake (hlavní i spolužadatel) pro fallback v „Základní údaje z DP“. */
+  lead?: { id: string; ico?: string; coApplicantIco?: string };
   /** Běží právě extrakce dat (DP/OP/výpisy) – zobrazí se progress na kartě */
   extractionInProgress?: boolean;
 }

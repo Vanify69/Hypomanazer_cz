@@ -974,6 +974,10 @@ export function CaseDetail() {
                 const lines = person ? getDpLines(person.dpData) : {};
                 const basicRaw = person ? getDpBasic(person.dpData) : {};
                 const basic = normalizeDpBasic(basicRaw);
+                const intakeIcoFallback =
+                  activeRealApplicant?.role === 'spoluzadatel'
+                    ? caseData?.lead?.coApplicantIco
+                    : caseData?.lead?.ico;
                 const hasAnyLines = Object.keys(lines).length > 0;
                 const hasAnyBasic = basic.ic || basic.dic || basic.czNace || basic.zpusobVydaju;
                 const hasDpData = Boolean(person?.dpData) || hasAnyLines || hasAnyBasic;
@@ -1126,7 +1130,7 @@ export function CaseDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         <div>
                           <span className="text-gray-500">IČ (identifikační číslo)</span>
-                          <p className="font-medium text-gray-900">{basic.ic || caseData?.lead?.ico || '—'}</p>
+                          <p className="font-medium text-gray-900">{basic.ic || intakeIcoFallback || '—'}</p>
                         </div>
                         <div>
                           <span className="text-gray-500">DIČ (daňové identifikační číslo)</span>
