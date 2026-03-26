@@ -34,6 +34,7 @@ export function ReferrersEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -54,6 +55,7 @@ export function ReferrersEdit() {
         setInvoiceCompanyName(r.invoiceCompanyName ?? '');
         setInvoiceIco(r.invoiceIco ?? '');
         setInvoiceDic(r.invoiceDic ?? '');
+        setIsBlocked(!!r.blockedAt);
       })
       .catch(() => setError('Tipaře se nepodařilo načíst.'))
       .finally(() => setLoading(false));
@@ -61,7 +63,7 @@ export function ReferrersEdit() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id) return;
+    if (!id || isBlocked) return;
     setError('');
     if (!displayName.trim()) {
       setError('Název / jméno tipaře je povinné.');
@@ -117,14 +119,20 @@ export function ReferrersEdit() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8">
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Upravit tipaře</h1>
           <p className="text-gray-600 dark:text-gray-300 mb-6">Změňte údaje partnera. Tipařský odkaz lze zkopírovat v seznamu tipařů.</p>
+          {isBlocked && (
+            <div className="mb-6 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100 text-sm">
+              Tento tipař je v <strong>blokaci</strong>. Úpravy nejsou možné. Obnovte ho nebo ho trvale smažte v sekci Tipaři → záložka Blokace.
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>}
+            <fieldset disabled={isBlocked} className="space-y-4 min-w-0 border-0 p-0 m-0">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Typ tipaře *</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
               >
                 {TYPES.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -244,7 +252,7 @@ export function ReferrersEdit() {
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || isBlocked}
                 className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {saving ? 'Ukládám…' : 'Uložit změny'}
@@ -253,6 +261,7 @@ export function ReferrersEdit() {
                 Zrušit
               </Link>
             </div>
+            </fieldset>
           </form>
         </div>
       </div>

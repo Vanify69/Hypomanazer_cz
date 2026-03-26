@@ -13,6 +13,26 @@ function getUserId(req: Request): string {
   return (req as Request & { user?: { userId: string } }).user!.userId;
 }
 
+function parseReferrerCommissionPercent(
+  raw: unknown,
+  payoutMethod: PayoutMethod
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  if (payoutMethod === "NONE") {
+    if (raw !== undefined && raw !== null && raw !== "") {
+      return { ok: false, error: 'U způsobu „bez provize“ nelze zadat procento.' };
+    }
+    return { ok: true, value: null };
+  }
+  if (raw === undefined || raw === null || raw === "") {
+    return { ok: true, value: null };
+  }
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    return { ok: false, error: "Provize musí být číslo mezi 0 a 100 %." };
+  }
+  return { ok: true, value: n };
+}
+
 function toReferrerResponse(r: {
   id: string;
   type: ReferrerType;
@@ -27,8 +47,12 @@ function toReferrerResponse(r: {
   invoiceDic?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  blockedAt?: Date | null;
+  agreedCommissionPercent?: number | null;
   _count?: { leads: number };
 }) {
+  const blockedAt = (r as { blockedAt?: Date | null }).blockedAt ?? null;
+  const acp = (r as { agreedCommissionPercent?: number | null }).agreedCommissionPercent;
   return {
     id: r.id,
     type: r.type,
@@ -37,12 +61,15 @@ function toReferrerResponse(r: {
     email: r.email ?? undefined,
     phone: r.phone ?? undefined,
     payoutMethod: r.payoutMethod,
+    agreedCommissionPercent:
+      acp === null || acp === undefined ? (acp === null ? null : undefined) : Number(acp),
     bankAccount: r.bankAccount ?? undefined,
     invoiceCompanyName: r.invoiceCompanyName ?? undefined,
     invoiceIco: r.invoiceIco ?? undefined,
     invoiceDic: r.invoiceDic ?? undefined,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
+    blockedAt: blockedAt ? blockedAt.toISOString() : null,
     leadCount: (r as { _count?: { leads: number } })._count?.leads ?? 0,
   };
 }
@@ -61,6 +88,7 @@ router.post("/", async (req: Request, res: Response) => {
     invoiceCompanyName?: string;
     invoiceIco?: string;
     invoiceDic?: string;
+    agreedCommissionPercent?: number | null;
   };
   const displayName = String(body.displayName ?? "").trim();
   if (!displayName) {
@@ -76,6 +104,12 @@ router.post("/", async (req: Request, res: Response) => {
   const validPayout: PayoutMethod[] = ["NONE", "BANK_TRANSFER", "INVOICE"];
   const payoutMethod = validPayout.includes((body.payoutMethod as PayoutMethod) ?? "") ? (body.payoutMethod as PayoutMethod) : "NONE";
 
+  const comm = parseReferrerCommissionPercent(body.agreedCommissionPercent, payoutMethod);
+  if (!comm.ok) {
+    res.status(400).json({ error: comm.error });
+    return;
+  }
+
   const referrer = await prisma.referrer.create({
     data: {
       ownerUserId: userId,
@@ -85,6 +119,7 @@ router.post("/", async (req: Request, res: Response) => {
       email: body.email?.trim() || null,
       phone: body.phone?.trim() || null,
       payoutMethod,
+      agreedCommissionPercent: comm.value,
       bankAccount: body.bankAccount?.trim() || null,
       invoiceCompanyName: body.invoiceCompanyName?.trim() || null,
       invoiceIco: body.invoiceIco?.trim() || null,
@@ -111,16 +146,20 @@ router.post("/", async (req: Request, res: Response) => {
   });
 });
 
-/** GET /api/referrers – seznam tipařů */
+/** GET /api/referrers – seznam tipařů (?blocked=true = jen blokace) */
 router.get("/", async (req: Request, res: Response) => {
   const userId = getUserId(req);
   const q = (req.query.q as string)?.trim();
   const type = req.query.type as string | undefined;
+  const showBlocked = req.query.blocked === "true" || req.query.blocked === "1";
 
-  const where: { ownerUserId: string; type?: ReferrerType } = { ownerUserId: userId };
+  const where: Record<string, unknown> = {
+    ownerUserId: userId,
+    ...(showBlocked ? { blockedAt: { not: null } } : { blockedAt: null }),
+  };
   if (type) where.type = type as ReferrerType;
   if (q) {
-    (where as Record<string, unknown>).OR = [
+    where.OR = [
       { displayName: { contains: q } },
       { email: { contains: q } },
       { phone: { contains: q } },
@@ -129,7 +168,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 
   const list = await prisma.referrer.findMany({
-    where,
+    where: where as { ownerUserId: string },
     orderBy: { updatedAt: "desc" },
     include: { _count: { select: { leads: true } } },
   });
@@ -151,6 +190,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     invoiceCompanyName?: string;
     invoiceIco?: string;
     invoiceDic?: string;
+    agreedCommissionPercent?: number | null;
   };
 
   const existing = await prisma.referrer.findFirst({
@@ -158,6 +198,10 @@ router.patch("/:id", async (req: Request, res: Response) => {
   });
   if (!existing) {
     res.status(404).json({ error: "Tipař nenalezen." });
+    return;
+  }
+  if (existing.blockedAt) {
+    res.status(400).json({ error: "Tipař je v blokaci. Nejprve ho obnovte, nebo trvale smažte z přehledu blokace." });
     return;
   }
 
@@ -182,6 +226,18 @@ router.patch("/:id", async (req: Request, res: Response) => {
     ? (body.payoutMethod as PayoutMethod)
     : existing.payoutMethod;
 
+  let agreedCommissionPercent: number | null | undefined = undefined;
+  if (payoutMethod === "NONE") {
+    agreedCommissionPercent = null;
+  } else if (body.agreedCommissionPercent !== undefined) {
+    const comm = parseReferrerCommissionPercent(body.agreedCommissionPercent, payoutMethod);
+    if (!comm.ok) {
+      res.status(400).json({ error: comm.error });
+      return;
+    }
+    agreedCommissionPercent = comm.value;
+  }
+
   const updated = await prisma.referrer.update({
     where: { id },
     data: {
@@ -191,6 +247,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
       email,
       phone,
       payoutMethod,
+      ...(agreedCommissionPercent !== undefined ? { agreedCommissionPercent } : {}),
       bankAccount: body.bankAccount !== undefined ? (body.bankAccount?.trim() || null) : undefined,
       invoiceCompanyName: body.invoiceCompanyName !== undefined ? (body.invoiceCompanyName?.trim() || null) : undefined,
       invoiceIco: body.invoiceIco !== undefined ? (body.invoiceIco?.trim() || null) : undefined,
@@ -211,6 +268,10 @@ router.post("/:id/regenerate-link", async (req: Request, res: Response) => {
   });
   if (!referrer) {
     res.status(404).json({ error: "Tipař nenalezen." });
+    return;
+  }
+  if (referrer.blockedAt) {
+    res.status(400).json({ error: "Tipař je v blokaci – odkaz nelze regenerovat." });
     return;
   }
 
@@ -264,6 +325,10 @@ router.get("/:id/leads", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Tipař nenalezen." });
     return;
   }
+  if (referrer.blockedAt) {
+    res.status(400).json({ error: "Tipař je v blokaci – přehled leadů není k dispozici. Obnovte tipaře nebo ho trvale odstraňte." });
+    return;
+  }
   const leads = await prisma.lead.findMany({
     where: { referrerId: id },
     orderBy: { updatedAt: "desc" },
@@ -297,6 +362,10 @@ router.post("/:id/send-link", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Tipař nenalezen." });
     return;
   }
+  if (referrer.blockedAt) {
+    res.status(400).json({ error: "Tipař je v blokaci – odkaz nelze odeslat." });
+    return;
+  }
   if (!referrer.email && !referrer.phone) {
     res.status(400).json({ error: "U tipaře chybí e-mail i telefon." });
     return;
@@ -322,6 +391,90 @@ router.post("/:id/send-link", async (req: Request, res: Response) => {
     sent: { sms: doSms, email: doEmail },
     message: "Pro skutečné odeslání spusťte worker a nastavte REDIS_URL.",
   });
+});
+
+/** POST /api/referrers/:id/block – přesun do blokace (bez vlivu na leady) */
+router.post("/:id/block", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+
+  const referrer = await prisma.referrer.findFirst({
+    where: { id, ownerUserId: userId },
+  });
+  if (!referrer) {
+    res.status(404).json({ error: "Tipař nenalezen." });
+    return;
+  }
+  if (referrer.blockedAt) {
+    res.status(400).json({ error: "Tipař je již v blokaci." });
+    return;
+  }
+  const updated = await prisma.referrer.update({
+    where: { id },
+    data: { blockedAt: new Date() },
+    include: { _count: { select: { leads: true } } },
+  });
+  res.json(toReferrerResponse(updated));
+});
+
+/** POST /api/referrers/:id/unblock – obnovení z blokace */
+router.post("/:id/unblock", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+
+  const referrer = await prisma.referrer.findFirst({
+    where: { id, ownerUserId: userId },
+  });
+  if (!referrer) {
+    res.status(404).json({ error: "Tipař nenalezen." });
+    return;
+  }
+  if (!referrer.blockedAt) {
+    res.status(400).json({ error: "Tipař není v blokaci." });
+    return;
+  }
+  const updated = await prisma.referrer.update({
+    where: { id },
+    data: { blockedAt: null },
+    include: { _count: { select: { leads: true } } },
+  });
+  res.json(toReferrerResponse(updated));
+});
+
+/** POST /api/referrers/:id/destroy-permanent – trvalé smazání jen z blokace; body: { deleteLeads?: boolean } */
+router.post("/:id/destroy-permanent", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+  const deleteLeads = req.body?.deleteLeads === true;
+
+  const referrer = await prisma.referrer.findFirst({
+    where: { id, ownerUserId: userId },
+  });
+  if (!referrer) {
+    res.status(404).json({ error: "Tipař nenalezen." });
+    return;
+  }
+  if (!referrer.blockedAt) {
+    res.status(400).json({
+      error: "Trvalé smazání je možné jen u tipařů v blokaci. Nejprve je přesuňte do blokace.",
+    });
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (deleteLeads) {
+      const leadRows = await tx.lead.findMany({
+        where: { referrerId: id },
+        select: { id: true },
+      });
+      for (const row of leadRows) {
+        await tx.lead.delete({ where: { id: row.id } });
+      }
+    }
+    await tx.referrer.delete({ where: { id } });
+  });
+
+  res.json({ ok: true });
 });
 
 export { router as referrersRouter };

@@ -9,7 +9,10 @@ const router = Router();
 async function findReferrerByToken(token: string) {
   const tokenHash = hashToken(token);
   const link = await prisma.referralLink.findFirst({
-    where: { tokenHash },
+    where: {
+      tokenHash,
+      referrer: { blockedAt: null },
+    },
     include: { referrer: true },
   });
   if (!link?.referrer) return null;
@@ -81,6 +84,7 @@ router.post("/:token/leads", async (req: Request, res: Response) => {
       note: body.note?.trim() || null,
       source: "REFERRER",
       referrerId: referrer.id,
+      agreedCommissionPercent: referrer.agreedCommissionPercent ?? null,
       status: "DRAFT",
     },
   });

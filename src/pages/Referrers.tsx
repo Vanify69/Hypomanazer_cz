@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Plus, Copy, Send, Pencil, ExternalLink } from 'lucide-react';
-import { getReferrers, sendReferrerLink, regenerateReferrerLink, type Referrer } from '../lib/api';
+import { Plus, Copy, Send, Pencil, ExternalLink, Ban, ArchiveRestore, Trash2 } from 'lucide-react';
+import {
+  getReferrers,
+  sendReferrerLink,
+  regenerateReferrerLink,
+  blockReferrer,
+  unblockReferrer,
+  destroyReferrerPermanently,
+  type Referrer,
+} from '../lib/api';
 
 const TYPE_LABELS: Record<string, string> = {
   ALLIANZ: 'Allianz',
@@ -34,6 +42,11 @@ export function Referrers() {
   const [typeFilter, setTypeFilter] = useState('');
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [copyId, setCopyId] = useState<string | null>(null);
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [blockingId, setBlockingId] = useState<string | null>(null);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
+  const [destroyTarget, setDestroyTarget] = useState<Referrer | null>(null);
+  const [destroyPending, setDestroyPending] = useState(false);
   const mountedRef = React.useRef(true);
 
   const load = () => {
@@ -44,7 +57,7 @@ export function Referrers() {
       setLoading(false);
       return;
     }
-    getReferrers({ q: q || undefined, type: typeFilter || undefined })
+    getReferrers({ q: q || undefined, type: typeFilter || undefined, blocked: showBlocked })
       .then((data) => {
         if (!mountedRef.current) return;
         setReferrers(Array.isArray(data) ? data : []);
@@ -66,7 +79,7 @@ export function Referrers() {
   }, []);
   useEffect(() => {
     load();
-  }, [typeFilter]);
+  }, [typeFilter, showBlocked]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +117,51 @@ export function Referrers() {
     }
   };
 
+  const handleBlock = async (r: Referrer) => {
+    if (
+      !window.confirm(
+        `Přesunout tipaře „${r.displayName}“ do blokace?\n\nLeady zůstanou v systému. Veřejný odkaz pro tipaře přestane fungovat, dokud tipaře znovu neobnovíte.`
+      )
+    ) {
+      return;
+    }
+    setBlockingId(r.id);
+    try {
+      await blockReferrer(r.id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Přesun do blokace se nepodařil.');
+    } finally {
+      setBlockingId(null);
+    }
+  };
+
+  const handleUnblock = async (r: Referrer) => {
+    setUnblockingId(r.id);
+    try {
+      await unblockReferrer(r.id);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Obnovení se nepodařilo.');
+    } finally {
+      setUnblockingId(null);
+    }
+  };
+
+  const runDestroy = async (deleteLeads: boolean) => {
+    if (!destroyTarget) return;
+    setDestroyPending(true);
+    try {
+      await destroyReferrerPermanently(destroyTarget.id, { deleteLeads });
+      setDestroyTarget(null);
+      load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Trvalé smazání se nepodařilo.');
+    } finally {
+      setDestroyPending(false);
+    }
+  };
+
   return (
     <div className="flex-1 bg-gray-50 app-content-dark overflow-auto">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -112,13 +170,32 @@ export function Referrers() {
             <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">Tipaři</h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Partneři, kteří vám přivádějí leady</p>
           </div>
-          <Link
-            to="/referrers/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shrink-0"
+          {!showBlocked && (
+            <Link
+              to="/referrers/new"
+              className="inline-flex items-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shrink-0"
+            >
+              <Plus className="w-5 h-5" />
+              Nový tipař
+            </Link>
+          )}
+        </div>
+
+        <div className="mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => setShowBlocked(false)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${!showBlocked ? 'bg-white dark:bg-gray-800 border border-b-0 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 -mb-px' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
           >
-            <Plus className="w-5 h-5" />
-            Nový tipař
-          </Link>
+            Aktivní tipaři
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBlocked(true)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${showBlocked ? 'bg-white dark:bg-gray-800 border border-b-0 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 -mb-px' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+          >
+            Blokace
+          </button>
         </div>
 
         <div className="agenda-filters-row mb-6 flex flex-col lg:flex-row flex-wrap gap-3 lg:gap-4 items-stretch lg:items-end">
@@ -180,43 +257,76 @@ export function Referrers() {
                     {r.leadCount ?? 0} leadů · {formatDate(r.createdAt)}
                   </p>
                   <div className="agenda-card-actions flex flex-wrap gap-2 items-center min-w-0">
-                    <Link
-                      to={`/referrers/${r.id}/edit`}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 min-h-[44px]"
-                    >
-                      <Pencil className="w-4 h-4" />
-                      Upravit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyLink(r)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px]"
-                    >
-                      {copyId === r.id ? 'Zkopírováno' : <><Copy className="w-4 h-4" /> Kopírovat odkaz</>}
-                    </button>
-                    <Link
-                      to={`/referrers/${r.id}/leads`}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline min-h-[44px]"
-                    >
-                      Leady
-                    </Link>
-                    {(r.email || r.phone) && (
-                      <button
-                        type="button"
-                        onClick={() => handleSendLink(r)}
-                        disabled={sendingId === r.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 min-h-[44px]"
-                      >
-                        <Send className="w-4 h-4" />
-                        Poslat link
-                      </button>
+                    {!showBlocked ? (
+                      <>
+                        <Link
+                          to={`/referrers/${r.id}/edit`}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 min-h-[44px]"
+                        >
+                          <Pencil className="w-4 h-4" />
+                          Upravit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink(r)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px]"
+                        >
+                          {copyId === r.id ? 'Zkopírováno' : <><Copy className="w-4 h-4" /> Kopírovat odkaz</>}
+                        </button>
+                        <Link
+                          to={`/referrers/${r.id}/leads`}
+                          className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline min-h-[44px]"
+                        >
+                          Leady
+                        </Link>
+                        {(r.email || r.phone) && (
+                          <button
+                            type="button"
+                            onClick={() => handleSendLink(r)}
+                            disabled={sendingId === r.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 min-h-[44px]"
+                          >
+                            <Send className="w-4 h-4" />
+                            Poslat link
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleBlock(r)}
+                          disabled={blockingId === r.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/60 disabled:opacity-50 min-h-[44px]"
+                        >
+                          <Ban className="w-4 h-4" />
+                          Do blokace
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleUnblock(r)}
+                          disabled={unblockingId === r.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 min-h-[44px]"
+                        >
+                          <ArchiveRestore className="w-4 h-4" />
+                          Obnovit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDestroyTarget(r)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-red-800 dark:text-red-200 bg-red-50 dark:bg-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 min-h-[44px]"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Trvale smazat
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
               ))}
               {referrers.length === 0 && (
                 <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  Žádní tipaři. Přidejte prvního tlačítkem Nový tipař.
+                  {showBlocked ? 'V blokaci zatím nic není.' : 'Žádní tipaři. Přidejte prvního tlačítkem Nový tipař.'}
                 </div>
               )}
             </div>
@@ -247,38 +357,71 @@ export function Referrers() {
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(r.createdAt)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <Link
-                          to={`/referrers/${r.id}/edit`}
-                          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                          title="Upravit tipaře"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyLink(r)}
-                          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                          title="Regenerovat a zkopírovat tipařský odkaz"
-                        >
-                          {copyId === r.id ? 'Zkopírováno' : <Copy className="w-4 h-4" />}
-                        </button>
-                        <Link
-                          to={`/referrers/${r.id}/leads`}
-                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
-                          title="Zobrazit leady tipaře"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
-                        {(r.email || r.phone) && (
-                          <button
-                            type="button"
-                            onClick={() => handleSendLink(r)}
-                            disabled={sendingId === r.id}
-                            className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
-                            title="Poslat tipařský link"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
+                        {!showBlocked ? (
+                          <>
+                            <Link
+                              to={`/referrers/${r.id}/edit`}
+                              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                              title="Upravit tipaře"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyLink(r)}
+                              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                              title="Regenerovat a zkopírovat tipařský odkaz"
+                            >
+                              {copyId === r.id ? 'Zkopírováno' : <Copy className="w-4 h-4" />}
+                            </button>
+                            <Link
+                              to={`/referrers/${r.id}/leads`}
+                              className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                              title="Zobrazit leady tipaře"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Link>
+                            {(r.email || r.phone) && (
+                              <button
+                                type="button"
+                                onClick={() => handleSendLink(r)}
+                                disabled={sendingId === r.id}
+                                className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                                title="Poslat tipařský link"
+                              >
+                                <Send className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleBlock(r)}
+                              disabled={blockingId === r.id}
+                              className="p-2 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded disabled:opacity-50"
+                              title="Přesunout do blokace"
+                            >
+                              <Ban className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleUnblock(r)}
+                              disabled={unblockingId === r.id}
+                              className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                              title="Obnovit z blokace"
+                            >
+                              <ArchiveRestore className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDestroyTarget(r)}
+                              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                              title="Trvale smazat"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                         </div>
                       </td>
@@ -289,11 +432,73 @@ export function Referrers() {
             </div>
             {referrers.length === 0 && (
               <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                Žádní tipaři. Přidejte prvního tlačítkem Nový tipař.
+                {showBlocked ? 'V blokaci zatím nic není.' : 'Žádní tipaři. Přidejte prvního tlačítkem Nový tipař.'}
               </div>
             )}
             </div>
           </>
+        )}
+
+        {destroyTarget && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="destroy-referrer-title"
+            onClick={() => !destroyPending && setDestroyTarget(null)}
+          >
+            <div
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 border border-gray-200 dark:border-gray-600"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="destroy-referrer-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Trvale smazat tipaře
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                „{destroyTarget.displayName}“ – tato akce je nevratná. Zvolte, zda mají zůstat leady v systému (bez vazby na tipaře), nebo se mají smazat i všechny jeho leady ({destroyTarget.leadCount ?? 0}).
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  disabled={destroyPending}
+                  onClick={() => runDestroy(false)}
+                  className="w-full px-4 py-3 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+                >
+                  Smazat jen tipaře (leady ponechat, odpojené)
+                </button>
+                <button
+                  type="button"
+                  disabled={destroyPending || (destroyTarget.leadCount ?? 0) === 0}
+                  onClick={() => {
+                    if (
+                      (destroyTarget.leadCount ?? 0) > 0 &&
+                      !window.confirm(
+                        `Opravdu trvale smazat tipaře i všech ${destroyTarget.leadCount} leadů? Tuto akci nelze vrátit.`
+                      )
+                    ) {
+                      return;
+                    }
+                    runDestroy(true);
+                  }}
+                  className="w-full px-4 py-3 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {destroyPending
+                    ? 'Mažu…'
+                    : (destroyTarget.leadCount ?? 0) === 0
+                      ? 'Smazat tipaře (žádné leady)'
+                      : `Smazat tipaře včetně ${destroyTarget.leadCount} leadů`}
+                </button>
+                <button
+                  type="button"
+                  disabled={destroyPending}
+                  onClick={() => setDestroyTarget(null)}
+                  className="w-full px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -184,6 +184,7 @@ model Lead {
   territory         String?
   qualityScore      Int?
   deletedAt         DateTime?    // soft delete – lead v koši
+  agreedCommissionPercent Float? // kopie z tipaře při vytvoření, u leadu lze měnit samostatně
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   leadEvents        LeadEvent[]
@@ -301,12 +302,14 @@ model Referrer {
   email               String?
   phone               String?
   payoutMethod        PayoutMethod     @default(NONE)
+  agreedCommissionPercent Float?     // výchozí pro nové leady od tipaře
   bankAccount         String?
   invoiceCompanyName  String?
   invoiceIco          String?
   invoiceDic          String?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
+  blockedAt           DateTime?        // přesun do blokace před trvalým smazáním
   leads               Lead[]
   referralLinks       ReferralLink[]
   referrerEvents      ReferrerEvent[]

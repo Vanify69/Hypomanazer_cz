@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
-import { getLead, updateLead } from '../lib/api';
+import { getLead, getReferrer, updateLead } from '../lib/api';
 import { ReferrerSelect } from '../components/leads/ReferrerSelect';
 
 const LOAN_TYPES = [
@@ -21,6 +21,7 @@ export function LeadsEdit() {
   const [note, setNote] = useState('');
   const [leadFromReferrer, setLeadFromReferrer] = useState(false);
   const [referrer, setReferrer] = useState<{ id: string; displayName: string } | null>(null);
+  const [agreedCommissionPercent, setAgreedCommissionPercent] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -37,6 +38,11 @@ export function LeadsEdit() {
         setNote(lead.note ?? '');
         setLeadFromReferrer(lead.source === 'REFERRER' && !!lead.referrerId);
         setReferrer(lead.referrer ? { id: lead.referrer.id, displayName: lead.referrer.displayName } : null);
+        setAgreedCommissionPercent(
+          lead.agreedCommissionPercent != null && Number.isFinite(lead.agreedCommissionPercent)
+            ? String(lead.agreedCommissionPercent)
+            : ''
+        );
       })
       .catch(() => setError('Lead se nepodařilo načíst.'))
       .finally(() => setLoading(false));
@@ -54,6 +60,21 @@ export function LeadsEdit() {
       setError('Vyberte tipaře nebo zrušte zaškrtnutí „Lead od tipaře“.');
       return;
     }
+    let commissionPayload: { agreedCommissionPercent?: number | null } = {};
+    if (leadFromReferrer) {
+      const t = agreedCommissionPercent.trim();
+      if (t === '') {
+        commissionPayload = { agreedCommissionPercent: null };
+      } else {
+        const n = Number(t.replace(',', '.'));
+        if (!Number.isFinite(n) || n < 0 || n > 100) {
+          setError('Provize musí být číslo mezi 0 a 100 %.');
+          return;
+        }
+        commissionPayload = { agreedCommissionPercent: n };
+      }
+    }
+
     setSaving(true);
     try {
       await updateLead(id, {
@@ -65,6 +86,7 @@ export function LeadsEdit() {
         note: note.trim() || undefined,
         source: leadFromReferrer ? 'REFERRER' : 'OWN',
         referrerId: leadFromReferrer && referrer ? referrer.id : null,
+        ...commissionPayload,
       });
       navigate('/leads');
     } catch (err) {
@@ -187,15 +209,53 @@ export function LeadsEdit() {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Lead od tipaře</span>
               </label>
               {leadFromReferrer && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Tipař
-                  </label>
-                  <ReferrerSelect
-                    value={referrer}
-                    onChange={setReferrer}
-                    placeholder="Hledat podle jména tipaře…"
-                  />
+                <div className="mt-2 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Tipař
+                    </label>
+                    <ReferrerSelect
+                      value={referrer}
+                      onChange={async (r) => {
+                        setReferrer(r);
+                        if (r) {
+                          try {
+                            const ref = await getReferrer(r.id);
+                            if (ref.agreedCommissionPercent != null && Number.isFinite(ref.agreedCommissionPercent)) {
+                              setAgreedCommissionPercent(String(ref.agreedCommissionPercent));
+                            } else {
+                              setAgreedCommissionPercent('');
+                            }
+                          } catch {
+                            /* ignore */
+                          }
+                        }
+                      }}
+                      placeholder="Hledat podle jména tipaře…"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="leadCommission"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                    >
+                      Domluvená provize u tohoto leadu (%)
+                    </label>
+                    <input
+                      id="leadCommission"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      value={agreedCommissionPercent}
+                      onChange={(e) => setAgreedCommissionPercent(e.target.value)}
+                      placeholder="z profilu tipaře; lze změnit jen zde"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Při vytvoření leadu se přenese z tipaře; změna u tipaře zpětně staré leady neupraví.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

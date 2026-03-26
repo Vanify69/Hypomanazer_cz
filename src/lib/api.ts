@@ -1,7 +1,7 @@
 /** V dev režimu prázdné (proxy). V produkci URL API na Railway (bez VITE_ kvůli Railpack „secret not found“). */
 export const API_BASE = import.meta.env.DEV
   ? ''
-  : 'https://hypomanazercz-production.up.railway.app';
+  : 'https://api.hypomanazer.cz';
 
 const getToken = (): string | null => localStorage.getItem('hypo-token');
 
@@ -181,6 +181,8 @@ export interface Lead {
   source: string;
   referrerId?: string;
   referrer?: { id: string; displayName: string };
+  /** null = explicitně bez %; undefined = klient nemusí posílat */
+  agreedCommissionPercent?: number | null;
   status: string;
   convertedCaseId?: string;
   createdAt: string;
@@ -236,6 +238,7 @@ export async function updateLead(
     note?: string;
     source?: 'OWN' | 'REFERRER';
     referrerId?: string | null;
+    agreedCommissionPercent?: number | null;
   }
 ): Promise<Lead> {
   return apiRequest<Lead>(`/api/leads/${id}`, {
@@ -318,12 +321,20 @@ export interface Referrer {
   createdAt: string;
   updatedAt: string;
   leadCount?: number;
+  /** null = aktivní tipař; ISO datum = v blokaci */
+  blockedAt?: string | null;
 }
 
-export async function getReferrers(params?: { q?: string; type?: string }): Promise<Referrer[]> {
+export async function getReferrers(params?: {
+  q?: string;
+  type?: string;
+  /** true = jen tipaři v blokaci */
+  blocked?: boolean;
+}): Promise<Referrer[]> {
   const search = new URLSearchParams();
   if (params?.q) search.set('q', params.q);
   if (params?.type) search.set('type', params.type);
+  if (params?.blocked) search.set('blocked', 'true');
   const qs = search.toString();
   return apiRequest<Referrer[]>(`/api/referrers${qs ? `?${qs}` : ''}`);
 }
@@ -386,6 +397,24 @@ export async function sendReferrerLink(id: string, channels: ('sms' | 'email')[]
   return apiRequest(`/api/referrers/${id}/send-link`, {
     method: 'POST',
     body: { channels },
+  });
+}
+
+export async function blockReferrer(id: string): Promise<Referrer> {
+  return apiRequest<Referrer>(`/api/referrers/${id}/block`, { method: 'POST' });
+}
+
+export async function unblockReferrer(id: string): Promise<Referrer> {
+  return apiRequest<Referrer>(`/api/referrers/${id}/unblock`, { method: 'POST' });
+}
+
+export async function destroyReferrerPermanently(
+  id: string,
+  opts: { deleteLeads: boolean }
+): Promise<{ ok: boolean }> {
+  return apiRequest<{ ok: boolean }>(`/api/referrers/${id}/destroy-permanent`, {
+    method: 'POST',
+    body: { deleteLeads: opts.deleteLeads },
   });
 }
 

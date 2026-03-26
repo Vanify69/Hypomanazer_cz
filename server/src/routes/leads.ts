@@ -21,6 +21,18 @@ function getUserId(req: Request): string {
   return (req as Request & { user?: { userId: string } }).user!.userId;
 }
 
+/** 0–100 %, null = bez hodnoty */
+function parseLeadCommissionPercent(value: unknown): { ok: true; value: number | null } | { ok: false; error: string } {
+  if (value === null || value === undefined || value === "") {
+    return { ok: true, value: null };
+  }
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    return { ok: false, error: "Provize musí být číslo mezi 0 a 100 %." };
+  }
+  return { ok: true, value: n };
+}
+
 /** Odpověď s leadem (pro list i detail). */
 function toLeadResponse(lead: {
   id: string;
@@ -40,6 +52,7 @@ function toLeadResponse(lead: {
   referrer?: { id: string; displayName: string } | null;
 }) {
   const convertedCaseId = lead.convertedCase?.id ?? null;
+  const acp = (lead as { agreedCommissionPercent?: number | null }).agreedCommissionPercent;
   return {
     id: lead.id,
     firstName: lead.firstName,
@@ -51,6 +64,8 @@ function toLeadResponse(lead: {
     source: lead.source,
     referrerId: lead.referrerId ?? undefined,
     referrer: lead.referrer ? { id: lead.referrer.id, displayName: lead.referrer.displayName } : undefined,
+    agreedCommissionPercent:
+      acp === null || acp === undefined ? (acp === null ? null : undefined) : Number(acp),
     status: lead.status,
     convertedCaseId: convertedCaseId ?? undefined,
     createdAt: lead.createdAt.toISOString(),
@@ -94,16 +109,18 @@ router.post("/", async (req: Request, res: Response) => {
 
   let source: LeadSource = "OWN";
   let referrerId: string | null = null;
+  let agreedCommissionPercent: number | null = null;
   if (body.source === "REFERRER" && body.referrerId?.trim()) {
     const ref = await prisma.referrer.findFirst({
-      where: { id: body.referrerId.trim(), ownerUserId: userId },
+      where: { id: body.referrerId.trim(), ownerUserId: userId, blockedAt: null },
     });
     if (!ref) {
-      res.status(400).json({ error: "Tipař nenalezen nebo nemáte oprávnění." });
+      res.status(400).json({ error: "Tipař nenalezen, nemáte oprávnění, nebo je v blokaci." });
       return;
     }
     source = "REFERRER";
     referrerId = ref.id;
+    agreedCommissionPercent = ref.agreedCommissionPercent ?? null;
   }
 
   const rawToken = generateToken();
@@ -122,6 +139,7 @@ router.post("/", async (req: Request, res: Response) => {
       note: body.note?.trim() || null,
       source,
       referrerId,
+      agreedCommissionPercent,
       status: "DRAFT",
     },
   });
@@ -195,6 +213,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     note?: string;
     source?: string;
     referrerId?: string | null;
+    agreedCommissionPercent?: number | null;
   };
 
   const existing = await prisma.lead.findFirst({
@@ -221,20 +240,39 @@ router.patch("/:id", async (req: Request, res: Response) => {
 
   let source: LeadSource = existing.source;
   let referrerId: string | null = existing.referrerId;
+  let refDefaultCommission: number | null | undefined = undefined;
   if (body.source !== undefined) {
     if (body.source === "REFERRER" && body.referrerId?.trim()) {
       const ref = await prisma.referrer.findFirst({
-        where: { id: body.referrerId.trim(), ownerUserId: userId },
+        where: { id: body.referrerId.trim(), ownerUserId: userId, blockedAt: null },
       });
       if (!ref) {
-        res.status(400).json({ error: "Tipař nenalezen nebo nemáte oprávnění." });
+        res.status(400).json({ error: "Tipař nenalezen, nemáte oprávnění, nebo je v blokaci." });
         return;
       }
       source = "REFERRER";
       referrerId = ref.id;
+      refDefaultCommission = ref.agreedCommissionPercent ?? null;
     } else {
       source = "OWN";
       referrerId = null;
+    }
+  }
+
+  let agreedCommissionPercent: number | null | undefined = undefined;
+  const hasCommBody = Object.prototype.hasOwnProperty.call(body, "agreedCommissionPercent");
+  if (hasCommBody) {
+    const parsed = parseLeadCommissionPercent(body.agreedCommissionPercent);
+    if (!parsed.ok) {
+      res.status(400).json({ error: parsed.error });
+      return;
+    }
+    agreedCommissionPercent = parsed.value;
+  } else if (body.source !== undefined) {
+    if (source === "OWN" || !referrerId) {
+      agreedCommissionPercent = null;
+    } else if (referrerId !== existing.referrerId) {
+      agreedCommissionPercent = refDefaultCommission ?? null;
     }
   }
 
@@ -249,6 +287,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
       note: body.note !== undefined ? (body.note?.trim() || null) : undefined,
       source,
       referrerId,
+      ...(agreedCommissionPercent !== undefined ? { agreedCommissionPercent } : {}),
     },
     include: { intakeSession: true, convertedCase: { select: { id: true } }, referrer: { select: { id: true, displayName: true } } },
   });
