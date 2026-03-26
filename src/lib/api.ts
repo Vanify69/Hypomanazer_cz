@@ -108,12 +108,14 @@ export async function apiRequestPublic<T>(
 export async function apiUpload<T>(
   path: string,
   file: File,
-  type: string
+  type: string,
+  options?: { extract?: boolean }
 ): Promise<T> {
   const token = getToken();
   const form = new FormData();
   form.append('file', file);
   form.append('type', type);
+  if (options?.extract === false) form.append('extract', 'false');
 
   let res: Response;
   try {

@@ -822,6 +822,7 @@ router.post("/:id/files", (req, res, next) => {
   const type = (req.body?.type as string) ?? "vypisy";
   const allowed = ["op-predni", "op-zadni", "danove", "vypisy"];
   const fileType = allowed.includes(type) ? type : "vypisy";
+  const shouldExtract = String(req.body?.extract ?? (req.query as any)?.extract ?? "true").toLowerCase() !== "false";
 
   console.log("[API] Upload souboru:", file.originalname, "| typ:", fileType);
 
@@ -837,7 +838,7 @@ router.post("/:id/files", (req, res, next) => {
   });
 
   // Automatická extrakce z OP (přední/zadní strana) – podle applicantId → personIndex
-  if (fileType === "op-predni" || fileType === "op-zadni") {
+  if (shouldExtract && (fileType === "op-predni" || fileType === "op-zadni")) {
     const applicantId = String((req.query as any)?.applicantId ?? req.body?.applicantId ?? "");
     const personFromApplicant = getPersonIndexFromApplicantId(applicantId);
     const personFromParam = Math.max(
@@ -871,7 +872,7 @@ router.post("/:id/files", (req, res, next) => {
     }
   }
 
-  if (fileType === "danove") {
+  if (shouldExtract && fileType === "danove") {
     const applicantId = String((req.query as any)?.applicantId ?? req.body?.applicantId ?? "");
     const personFromApplicant = getPersonIndexFromApplicantId(applicantId);
     const personFromParam = Math.max(
@@ -909,7 +910,7 @@ router.post("/:id/files", (req, res, next) => {
     }
   }
 
-  if (fileType === "vypisy") {
+  if (shouldExtract && fileType === "vypisy") {
     const applicantId = String((req.query as any)?.applicantId ?? req.body?.applicantId ?? "");
     const personFromApplicant = getPersonIndexFromApplicantId(applicantId);
     const personFromParam = Math.max(

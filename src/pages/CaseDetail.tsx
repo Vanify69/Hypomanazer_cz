@@ -25,8 +25,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { getCase, saveCase, setActiveCase, deleteCase, patchCaseStatus, uploadCaseFile, deleteCaseFile, reparseDpFromStoredOutput, parseDpFromRawText, reparseOpFromStoredOutput, reparseVypisyFromStoredOutput } from '../lib/storage';
-import { API_BASE } from '../lib/api';
-import { Case, DpData, VypisyPrijmy, Applicant, ExtractedData, getDpLines, getDpBasic, type DealStatus } from '../lib/types';
+import { Case, DpData, VypisyPrijmy, Applicant, ExtractedData, UploadedFile, getDpLines, getDpBasic, type DealStatus } from '../lib/types';
 import { StatusBadge } from '../components/cases/StatusBadge';
 import { ApplicantPanels } from '../components/cases/ApplicantPanels';
 import { ApplicantUploadModal } from '../components/modals/ApplicantUploadModal';
@@ -241,6 +240,11 @@ export function CaseDetail() {
   const [vypisyUploadError, setVypisyUploadError] = useState<string | null>(null);
   const [vypisyReparsing, setVypisyReparsing] = useState(false);
   const [opReparsing, setOpReparsing] = useState(false);
+  const [reuploadModalOpen, setReuploadModalOpen] = useState(false);
+  const [reuploadTargetFile, setReuploadTargetFile] = useState<UploadedFile | null>(null);
+  const [reuploadSelectedFile, setReuploadSelectedFile] = useState<File | null>(null);
+  const [reuploadSubmitting, setReuploadSubmitting] = useState(false);
+  const [reuploadError, setReuploadError] = useState<string | null>(null);
 
   const mountedRef = React.useRef(true);
   useEffect(() => {
@@ -454,6 +458,40 @@ export function CaseDetail() {
       setCaseData(updated);
     } finally {
       setDeletingFileId(null);
+    }
+  };
+
+  const handleOpenReuploadModal = (file: UploadedFile) => {
+    setReuploadTargetFile(file);
+    setReuploadSelectedFile(null);
+    setReuploadError(null);
+    setReuploadModalOpen(true);
+  };
+
+  const handleRunReupload = async (extract: boolean) => {
+    if (!caseData || !reuploadTargetFile || !reuploadSelectedFile) return;
+    const applicantId = reuploadTargetFile.applicantId ?? activeRealApplicant?.id;
+    setReuploadSubmitting(true);
+    setReuploadError(null);
+    try {
+      let updated = await uploadCaseFile(
+        caseData.id,
+        reuploadSelectedFile,
+        reuploadTargetFile.type,
+        applicantId,
+        { extract }
+      );
+      if (reuploadTargetFile.id) {
+        updated = await deleteCaseFile(caseData.id, reuploadTargetFile.id);
+      }
+      setCaseData(updated);
+      setReuploadModalOpen(false);
+      setReuploadTargetFile(null);
+      setReuploadSelectedFile(null);
+    } catch (err) {
+      setReuploadError(err instanceof Error ? err.message : 'Nahrání souboru selhalo.');
+    } finally {
+      setReuploadSubmitting(false);
     }
   };
 
@@ -1424,30 +1462,24 @@ export function CaseDetail() {
                           <p className="text-xs text-gray-500">{fileTypeLabels[file.type]}</p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {file.url && (
-                            <>
-                              <a
-                                href={`${API_BASE}${file.url}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="doc-file-btn doc-file-btn-zobrazit"
-                                title="Zobrazit"
-                              >
-                                <Eye className="w-4 h-4" />
-                                Zobrazit
-                              </a>
-                              <a
-                                href={`${API_BASE}${file.url}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="doc-file-btn doc-file-btn-prehrat"
-                                title="Přehrát"
-                              >
-                                <RotateCw className="w-4 h-4" />
-                                Přehrát
-                              </a>
-                            </>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReuploadModal(file)}
+                            className="doc-file-btn doc-file-btn-zobrazit"
+                            title="Zobrazit (nové nahrání)"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Zobrazit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReuploadModal(file)}
+                            className="doc-file-btn doc-file-btn-prehrat"
+                            title="Přehrát"
+                          >
+                            <RotateCw className="w-4 h-4" />
+                            Přehrát
+                          </button>
                           <button
                             type="button"
                             onClick={() => file.id && handleDeleteFile(file.id)}
@@ -1545,6 +1577,66 @@ export function CaseDetail() {
           danger
         />
       )}
+
+      <SimpleModal
+        open={reuploadModalOpen}
+        onClose={() => {
+          if (reuploadSubmitting) return;
+          setReuploadModalOpen(false);
+          setReuploadTargetFile(null);
+          setReuploadSelectedFile(null);
+          setReuploadError(null);
+        }}
+        title="Nahrát nový soubor"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            {reuploadTargetFile ? `Typ: ${fileTypeLabels[reuploadTargetFile.type]} | Původní: ${reuploadTargetFile.name}` : ''}
+          </p>
+          <input
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.gif"
+            onChange={(e) => setReuploadSelectedFile(e.target.files?.[0] ?? null)}
+            disabled={reuploadSubmitting}
+            className="block w-full text-sm"
+          />
+          {reuploadSelectedFile && (
+            <p className="text-xs text-gray-500">Vybraný soubor: {reuploadSelectedFile.name}</p>
+          )}
+          {reuploadError && <p className="text-sm text-red-600">{reuploadError}</p>}
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setReuploadModalOpen(false);
+                setReuploadTargetFile(null);
+                setReuploadSelectedFile(null);
+                setReuploadError(null);
+              }}
+              disabled={reuploadSubmitting}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-md"
+            >
+              Zrušit
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleRunReupload(false)}
+              disabled={!reuploadSelectedFile || reuploadSubmitting}
+              className="px-3 py-2 text-sm border border-blue-300 text-blue-700 rounded-md disabled:opacity-50"
+            >
+              Nahrát a uložit
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleRunReupload(true)}
+              disabled={!reuploadSelectedFile || reuploadSubmitting}
+              className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md disabled:opacity-50"
+            >
+              Nahrát a extrahovat
+            </button>
+          </div>
+        </div>
+      </SimpleModal>
     </>
   );
 }

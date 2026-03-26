@@ -110,12 +110,13 @@ export async function uploadCaseFile(
   caseId: string,
   file: File,
   type: 'op-predni' | 'op-zadni' | 'danove' | 'vypisy',
-  applicantId?: string
+  applicantId?: string,
+  options?: { extract?: boolean }
 ): Promise<Case> {
   const path = applicantId
     ? `/api/cases/${caseId}/files?applicantId=${encodeURIComponent(applicantId)}`
     : `/api/cases/${caseId}/files`;
-  return apiUpload<Case>(path, file, type);
+  return apiUpload<Case>(path, file, type, options);
 }
 
 export async function deleteCaseFile(caseId: string, fileId: string): Promise<Case> {
